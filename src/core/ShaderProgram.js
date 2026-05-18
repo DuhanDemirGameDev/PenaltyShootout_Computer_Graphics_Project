@@ -102,7 +102,11 @@ export class ShaderProgram {
     const location = this.getUniformLocation(name);
 
     if (location !== null) {
-      this.gl.uniform3fv(location, vector);
+      if (Array.isArray(vector) || vector instanceof Float32Array) {
+        this.gl.uniform3fv(location, vector);
+      } else {
+        this.gl.uniform3f(location, vector.x, vector.y, vector.z);
+      }
     }
   }
 

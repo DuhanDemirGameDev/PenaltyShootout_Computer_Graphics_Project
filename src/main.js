@@ -1,24 +1,26 @@
 import { WebGLApp } from "./core/WebGLApp.js";
+import { Camera } from "./core/Camera.js";
 import { GameObject } from "./core/GameObject.js";
+import { Scene } from "./core/Scene.js";
 import { ShaderProgram } from "./core/ShaderProgram.js";
+import { Time } from "./core/Time.js";
+import { Cylinder } from "./geometry/Cylinder.js";
+import { Plane } from "./geometry/Plane.js";
 import { Sphere } from "./geometry/Sphere.js";
-import { Mat4 } from "./math/Mat4.js";
-import { Transform } from "./math/Transform.js";
+import { InputManager } from "./interaction/InputManager.js";
 import { Vec3 } from "./math/Vec3.js";
 
 const basicVertexShaderSourceWebGL2 = `#version 300 es
 precision highp float;
 
 in vec3 aPosition;
-in vec3 aNormal;
 
 uniform mat4 uModelMatrix;
-
-out vec3 vNormal;
+uniform mat4 uViewMatrix;
+uniform mat4 uProjectionMatrix;
 
 void main() {
-  vNormal = aNormal;
-  gl_Position = uModelMatrix * vec4(aPosition, 1.0);
+  gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
 }
 `;
 
@@ -27,11 +29,10 @@ precision highp float;
 
 out vec4 fragColor;
 
-in vec3 vNormal;
+uniform vec3 uColor;
 
 void main() {
-  vec3 normalColor = normalize(vNormal) * 0.5 + 0.5;
-  fragColor = vec4(normalColor, 1.0);
+  fragColor = vec4(uColor, 1.0);
 }
 `;
 
@@ -39,26 +40,23 @@ const basicVertexShaderSourceWebGL1 = `
 precision highp float;
 
 attribute vec3 aPosition;
-attribute vec3 aNormal;
 
 uniform mat4 uModelMatrix;
-
-varying vec3 vNormal;
+uniform mat4 uViewMatrix;
+uniform mat4 uProjectionMatrix;
 
 void main() {
-  vNormal = aNormal;
-  gl_Position = uModelMatrix * vec4(aPosition, 1.0);
+  gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
 }
 `;
 
 const basicFragmentShaderSourceWebGL1 = `
 precision highp float;
 
-varying vec3 vNormal;
+uniform vec3 uColor;
 
 void main() {
-  vec3 normalColor = normalize(vNormal) * 0.5 + 0.5;
-  gl_FragColor = vec4(normalColor, 1.0);
+  gl_FragColor = vec4(uColor, 1.0);
 }
 `;
 
@@ -77,63 +75,102 @@ function main() {
       vertexSource,
       fragmentSource
     );
+    const camera = new Camera({
+      position: new Vec3(0, 5, 12),
+      target: new Vec3(0, 0, 0),
+      aspectRatio: app.canvas.width / app.canvas.height,
+    });
+    const scene = new Scene({ camera });
+    const time = new Time();
+    const input = new InputManager(app.canvas);
 
     shader.use();
     app.clear();
+    shader.setMat4("uViewMatrix", camera.getViewMatrix().elements);
+    shader.setMat4("uProjectionMatrix", camera.getProjectionMatrix().elements);
 
     console.info(
       `Penalty Shootout Simulator initialized with ${app.isWebGL2 ? "WebGL2" : "WebGL1"}.`
     );
-    console.info("Basic shader program compiled and linked successfully.");
+    console.info("Solid-color shader program compiled and linked successfully.");
 
-    const startPosition = new Vec3(1, 2, 3);
-    const translation = Mat4.translation(4, 5, 6);
-    const translatedPosition = translation.transformVec3(startPosition);
+    // ============================================================
+    // === ZEYNEP'S AREA: MODELING & HIERARCHY ====================
+    // Create scene objects here: ground, ball, goalpost, stadium
+    // lights, goalkeeper body parts, and parent-child transforms.
+    // Add every visible GameObject to the Scene with scene.add(...).
+    // ============================================================
 
-    console.info(
-      `Math test: ${startPosition.toString()} translated by (4, 5, 6) = ${translatedPosition.toString()}`
-    );
-
-    const torsoTransform = new Transform();
-    torsoTransform.position = new Vec3(0, 1.5, -5);
-
-    const armTransform = new Transform();
-    armTransform.position = new Vec3(1, 0, 0);
-
-    torsoTransform.addChild(armTransform);
-    torsoTransform.updateWorldMatrix();
-
-    const armWorldOrigin = armTransform.worldMatrix.transformVec3(new Vec3(0, 0, 0));
-
-    console.info(
-      `Transform hierarchy test: arm local origin in world space = ${armWorldOrigin.toString()}`
-    );
-
-    const dummyParent = new GameObject({ name: "Dummy Parent" });
-    const dummyChild = new GameObject({ name: "Dummy Child" });
-
-    dummyParent.transform.position = new Vec3(0, 0.5, -2);
-    dummyChild.transform.position = new Vec3(0.25, 0, 0);
-    dummyParent.transform.addChild(dummyChild.transform);
-
-    dummyParent.update(0);
-    dummyChild.update(0);
-    dummyParent.render(app.gl, shader, null);
-
-    const dummyChildWorldOrigin = dummyChild.transform.worldMatrix.transformVec3(new Vec3(0, 0, 0));
-
-    console.info(
-      `GameObject test: ${dummyChild.name} world origin = ${dummyChildWorldOrigin.toString()}`
-    );
-
-    const sphereObject = new GameObject({
-      name: "Generated Sphere",
-      geometry: new Sphere(app.gl, 0.55, 32, 16),
+    const ground = new GameObject({
+      name: "Ground",
+      geometry: new Plane(app.gl, 20, 20, 1),
+      material: { color: new Vec3(0.08, 0.45, 0.15) },
     });
+    ground.transform.position = new Vec3(0, 0, 0);
 
-    sphereObject.render(app.gl, shader, null);
+    const ball = new GameObject({
+      name: "Ball",
+      geometry: new Sphere(app.gl, 0.5, 32, 16),
+      material: { color: new Vec3(0.95, 0.95, 0.9) },
+    });
+    ball.transform.position = new Vec3(0, 0.5, 3);
 
-    console.info("Geometry test: mathematically generated sphere rendered successfully.");
+    const leftGoalpost = new GameObject({
+      name: "Left Goalpost",
+      geometry: new Cylinder(app.gl, 0.1, 3, 24),
+      material: { color: new Vec3(0.85, 0.85, 0.82) },
+    });
+    leftGoalpost.transform.position = new Vec3(-2.5, 1.5, -7);
+
+    const rightGoalpost = new GameObject({
+      name: "Right Goalpost",
+      geometry: new Cylinder(app.gl, 0.1, 3, 24),
+      material: { color: new Vec3(0.85, 0.85, 0.82) },
+    });
+    rightGoalpost.transform.position = new Vec3(2.5, 1.5, -7);
+
+    scene.add(ground);
+    scene.add(ball);
+    scene.add(leftGoalpost);
+    scene.add(rightGoalpost);
+
+    const animate = (timestamp) => {
+      time.update(timestamp);
+
+      camera.updateAspectRatio(app.canvas.width, app.canvas.height);
+
+      // ============================================================
+      // === BARIS'S AREA: INPUT, PHYSICS & ANIMATION ===============
+      // Read input here, then update gameplay systems such as mouse
+      // picking, target movement, ball trajectory, goalkeeper dive,
+      // collision checks, and save/goal state.
+      // ============================================================
+
+      if (input.wasKeyPressed("Space")) {
+        console.info("Input test: Space key pressed.");
+      }
+
+      if (input.wasMouseClicked()) {
+        const mouse = input.getMousePosition();
+        console.info(
+          `Input test: mouse click at canvas (${mouse.x.toFixed(1)}, ${mouse.y.toFixed(1)}), NDC (${mouse.ndcX.toFixed(3)}, ${mouse.ndcY.toFixed(3)}).`
+        );
+      }
+
+      app.clear();
+      shader.use();
+      scene.update(time.deltaTime);
+      scene.render(app.gl, shader);
+      input.endFrame();
+
+      requestAnimationFrame(animate);
+    };
+
+    console.info("Minimal test scene assembled: ground, ball, and dummy goalposts added to Scene.");
+    console.info("Render loop started: Time is updating the scene every animation frame.");
+    console.info("Input test ready: press Space or click the canvas.");
+
+    requestAnimationFrame(animate);
   } catch (error) {
     console.error("Failed to initialize Penalty Shootout Simulator.", error);
   }

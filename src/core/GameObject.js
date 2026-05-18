@@ -1,13 +1,16 @@
 import { Transform } from "../math/Transform.js";
+import { Vec3 } from "../math/Vec3.js";
 
 export class GameObject {
   constructor({ name = "GameObject", geometry = null, material = null } = {}) {
     this.name = name;
     this.transform = new Transform();
 
-    // These will be connected in later phases when mesh and material systems exist.
     this.geometry = geometry;
-    this.material = material;
+    this.material = {
+      color: new Vec3(1, 1, 1),
+      ...material,
+    };
     this.visible = true;
   }
 
@@ -24,6 +27,7 @@ export class GameObject {
 
     if (shaderProgram && this.geometry) {
       shaderProgram.setMat4("uModelMatrix", this.transform.worldMatrix.elements);
+      shaderProgram.setVec3("uColor", this.material.color);
       this.geometry.draw(shaderProgram);
     }
 
