@@ -76,11 +76,11 @@ export class ShaderProgram {
     return this.uniformLocations.get(name);
   }
 
-  getAttribLocation(name) {
+  getAttribLocation(name, warnIfMissing = true) {
     if (!this.attribLocations.has(name)) {
       const location = this.gl.getAttribLocation(this.program, name);
 
-      if (location === -1) {
+      if (location === -1 && warnIfMissing) {
         console.warn(`Attribute "${name}" was not found in the active shader program.`);
       }
 

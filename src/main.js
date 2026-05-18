@@ -1,5 +1,7 @@
 import { WebGLApp } from "./core/WebGLApp.js";
+import { GameObject } from "./core/GameObject.js";
 import { ShaderProgram } from "./core/ShaderProgram.js";
+import { Sphere } from "./geometry/Sphere.js";
 import { Mat4 } from "./math/Mat4.js";
 import { Transform } from "./math/Transform.js";
 import { Vec3 } from "./math/Vec3.js";
@@ -8,9 +10,15 @@ const basicVertexShaderSourceWebGL2 = `#version 300 es
 precision highp float;
 
 in vec3 aPosition;
+in vec3 aNormal;
+
+uniform mat4 uModelMatrix;
+
+out vec3 vNormal;
 
 void main() {
-  gl_Position = vec4(aPosition, 1.0);
+  vNormal = aNormal;
+  gl_Position = uModelMatrix * vec4(aPosition, 1.0);
 }
 `;
 
@@ -19,8 +27,11 @@ precision highp float;
 
 out vec4 fragColor;
 
+in vec3 vNormal;
+
 void main() {
-  fragColor = vec4(0.95, 0.95, 1.0, 1.0);
+  vec3 normalColor = normalize(vNormal) * 0.5 + 0.5;
+  fragColor = vec4(normalColor, 1.0);
 }
 `;
 
@@ -28,17 +39,26 @@ const basicVertexShaderSourceWebGL1 = `
 precision highp float;
 
 attribute vec3 aPosition;
+attribute vec3 aNormal;
+
+uniform mat4 uModelMatrix;
+
+varying vec3 vNormal;
 
 void main() {
-  gl_Position = vec4(aPosition, 1.0);
+  vNormal = aNormal;
+  gl_Position = uModelMatrix * vec4(aPosition, 1.0);
 }
 `;
 
 const basicFragmentShaderSourceWebGL1 = `
 precision highp float;
 
+varying vec3 vNormal;
+
 void main() {
-  gl_FragColor = vec4(0.95, 0.95, 1.0, 1.0);
+  vec3 normalColor = normalize(vNormal) * 0.5 + 0.5;
+  gl_FragColor = vec4(normalColor, 1.0);
 }
 `;
 
@@ -88,6 +108,32 @@ function main() {
     console.info(
       `Transform hierarchy test: arm local origin in world space = ${armWorldOrigin.toString()}`
     );
+
+    const dummyParent = new GameObject({ name: "Dummy Parent" });
+    const dummyChild = new GameObject({ name: "Dummy Child" });
+
+    dummyParent.transform.position = new Vec3(0, 0.5, -2);
+    dummyChild.transform.position = new Vec3(0.25, 0, 0);
+    dummyParent.transform.addChild(dummyChild.transform);
+
+    dummyParent.update(0);
+    dummyChild.update(0);
+    dummyParent.render(app.gl, shader, null);
+
+    const dummyChildWorldOrigin = dummyChild.transform.worldMatrix.transformVec3(new Vec3(0, 0, 0));
+
+    console.info(
+      `GameObject test: ${dummyChild.name} world origin = ${dummyChildWorldOrigin.toString()}`
+    );
+
+    const sphereObject = new GameObject({
+      name: "Generated Sphere",
+      geometry: new Sphere(app.gl, 0.55, 32, 16),
+    });
+
+    sphereObject.render(app.gl, shader, null);
+
+    console.info("Geometry test: mathematically generated sphere rendered successfully.");
   } catch (error) {
     console.error("Failed to initialize Penalty Shootout Simulator.", error);
   }
