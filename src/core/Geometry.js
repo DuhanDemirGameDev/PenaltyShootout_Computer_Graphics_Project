@@ -75,7 +75,8 @@ export class Geometry {
   bind(shaderProgram) {
     this.bindAttribute(shaderProgram, "aPosition", this.buffers.position, 3, true);
     this.bindAttribute(shaderProgram, "aNormal", this.buffers.normal, 3);
-    this.bindAttribute(shaderProgram, "aTexCoord", this.buffers.uv, 2);
+    
+    this.bindAttribute(shaderProgram, "aUv", this.buffers.uv, 2);
 
     if (this.buffers.index) {
       this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.buffers.index);

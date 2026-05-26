@@ -9,30 +9,44 @@ import { Plane } from "./geometry/Plane.js";
 import { Sphere } from "./geometry/Sphere.js";
 import { InputManager } from "./interaction/InputManager.js";
 import { Vec3 } from "./math/Vec3.js";
+import { TextureLoader } from "./utils/TextureLoader.js";
+import { Ground } from "./objects/Ground.js";
 
 const basicVertexShaderSourceWebGL2 = `#version 300 es
 precision highp float;
 
 in vec3 aPosition;
+in vec2 aUv;
 
 uniform mat4 uModelMatrix;
 uniform mat4 uViewMatrix;
 uniform mat4 uProjectionMatrix;
 
+out vec2 vUv;
+
 void main() {
   gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
+  vUv = aUv;
 }
 `;
 
 const basicFragmentShaderSourceWebGL2 = `#version 300 es
 precision highp float;
 
+in vec2 vUv;
+
 out vec4 fragColor;
 
 uniform vec3 uColor;
+uniform sampler2D uTexture;
+uniform bool uUseTexture;
 
 void main() {
-  fragColor = vec4(uColor, 1.0);
+  if (uUseTexture) {
+      fragColor = texture(uTexture, vUv); // Resim varsa ilgili pikseli al
+  } else {
+      fragColor = vec4(uColor, 1.0); // Yoksa düz renk kullan
+  }
 }
 `;
 
@@ -40,23 +54,36 @@ const basicVertexShaderSourceWebGL1 = `
 precision highp float;
 
 attribute vec3 aPosition;
+attribute vec2 aUv
 
 uniform mat4 uModelMatrix;
 uniform mat4 uViewMatrix;
 uniform mat4 uProjectionMatrix;
 
+varying vec2 vUv;
+
 void main() {
   gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
+  vUv = aUv;
 }
 `;
 
 const basicFragmentShaderSourceWebGL1 = `
 precision highp float;
 
+varying vec2 vUv;
+
 uniform vec3 uColor;
 
+uniform sampler2D uTexture;
+uniform bool uUseTexture;
+
 void main() {
-  gl_FragColor = vec4(uColor, 1.0);
+  if (uUseTexture) {
+      gl_FragColor = texture2D(uTexture, vUv);
+  } else {
+      gl_FragColor = vec4(uColor, 1.0);
+  }
 }
 `;
 
@@ -101,12 +128,11 @@ function main() {
     // Add every visible GameObject to the Scene with scene.add(...).
     // ============================================================
 
-    const ground = new GameObject({
-      name: "Ground",
-      geometry: new Plane(app.gl, 20, 20, 1),
-      material: { color: new Vec3(0.08, 0.45, 0.15) },
-    });
+    const textureLoader = new TextureLoader(app.gl);
+    const grassTexture = textureLoader.loadTexture("assets/textures/grass.jpg");
+    const ground = new Ground(app.gl, grassTexture);
     ground.transform.position = new Vec3(0, 0, 0);
+
 
     const ball = new GameObject({
       name: "Ball",
