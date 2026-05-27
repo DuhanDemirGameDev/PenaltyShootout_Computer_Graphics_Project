@@ -14,6 +14,7 @@ import { Ground } from "./objects/Ground.js";
 import { Ball } from "./objects/Ball.js";
 import { GoalPost } from "./objects/GoalPost.js";
 import { StadiumLight } from "./objects/StadiumLights.js";
+import { Goalkeeper } from "./objects/Goalkeeper.js";
 
 const basicVertexShaderSourceWebGL2 = `#version 300 es
 precision highp float;
@@ -106,7 +107,7 @@ function main() {
       fragmentSource
     );
     const camera = new Camera({
-      position: new Vec3(0, 10, 20),
+      position: new Vec3(0, 10, 30),
       target: new Vec3(0, 0, 0),
       aspectRatio: app.canvas.width / app.canvas.height,
     });
@@ -159,26 +160,31 @@ function main() {
     // 1. Sol Arka (Uzak Sol)
     const farLeftLight = new StadiumLight(app.gl);
     farLeftLight.transform.position = new Vec3(-9, 0, -9);
-    farLeftLight.transform.rotation.y = Math.PI * 0.75; // Merkeze dönük (135 derece)
+    farLeftLight.transform.rotation.y = Math.PI * 0.25; // Merkeze dönük (135 derece)
     scene.add(farLeftLight);
 
     // 2. Sağ Arka (Uzak Sağ)
     const farRightLight = new StadiumLight(app.gl);
     farRightLight.transform.position = new Vec3(9, 0, -9);
-    farRightLight.transform.rotation.y = -Math.PI * 0.75; // Merkeze dönük (-135 derece)
+    farRightLight.transform.rotation.y = -Math.PI * 0.25; // Merkeze dönük (-135 derece)
     scene.add(farRightLight);
 
     // 3. Sol Ön (Yakın Sol)
     const nearLeftLight = new StadiumLight(app.gl);
     nearLeftLight.transform.position = new Vec3(-9, 0, 7);
-    nearLeftLight.transform.rotation.y = Math.PI * 0.25; // Merkeze dönük (45 derece)
+    nearLeftLight.transform.rotation.y = Math.PI * 0.75; // Merkeze dönük (45 derece)
     scene.add(nearLeftLight);
 
     // 4. Sağ Ön (Yakın Sağ)
     const nearRightLight = new StadiumLight(app.gl);
     nearRightLight.transform.position = new Vec3(9, 0, 7);
-    nearRightLight.transform.rotation.y = -Math.PI * 0.25; // Merkeze dönük (-45 derece)
+    nearRightLight.transform.rotation.y = -Math.PI * 0.75; // Merkeze dönük (-45 derece)
     scene.add(nearRightLight);
+
+    // KALECİ 
+    const goalie = new Goalkeeper(app.gl);
+    goalie.transform.position = new Vec3(0, 0, -7.5); // Kalenin hemen önüne koyduk
+    scene.add(goalie);
 
     const animate = (timestamp) => {
       time.update(timestamp);
