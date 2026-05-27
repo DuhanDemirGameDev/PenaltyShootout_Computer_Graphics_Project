@@ -13,6 +13,7 @@ import { TextureLoader } from "./utils/TextureLoader.js";
 import { Ground } from "./objects/Ground.js";
 import { Ball } from "./objects/Ball.js";
 import { GoalPost } from "./objects/GoalPost.js";
+import { StadiumLight } from "./objects/StadiumLights.js";
 
 const basicVertexShaderSourceWebGL2 = `#version 300 es
 precision highp float;
@@ -105,7 +106,7 @@ function main() {
       fragmentSource
     );
     const camera = new Camera({
-      position: new Vec3(0, 5, 12),
+      position: new Vec3(0, 10, 20),
       target: new Vec3(0, 0, 0),
       aspectRatio: app.canvas.width / app.canvas.height,
     });
@@ -136,20 +137,48 @@ function main() {
     // ject to the Scene with scene.add(...).
     // ============================================================
 
+    //ZEMİN
     const textureLoader = new TextureLoader(app.gl);
     const grassTexture = textureLoader.loadTexture("assets/textures/grass.jpg");
     const ground = new Ground(app.gl, grassTexture);
     scene.add(ground);
 
+    //TOP
     const ballTexture = textureLoader.loadTexture("assets/textures/football.jpg");
     const ball = new Ball(app.gl, ballTexture);
     scene.add(ball);
 
+    //KALE
     const netTexture = textureLoader.loadTexture("assets/textures/net.png");
     
     const goal = new GoalPost(app.gl, netTexture);
     goal.transform.position = new Vec3(0, 0, -7); 
     scene.add(goal);
+
+    // STADYUM IŞIKLARI
+    // 1. Sol Arka (Uzak Sol)
+    const farLeftLight = new StadiumLight(app.gl);
+    farLeftLight.transform.position = new Vec3(-9, 0, -9);
+    farLeftLight.transform.rotation.y = Math.PI * 0.75; // Merkeze dönük (135 derece)
+    scene.add(farLeftLight);
+
+    // 2. Sağ Arka (Uzak Sağ)
+    const farRightLight = new StadiumLight(app.gl);
+    farRightLight.transform.position = new Vec3(9, 0, -9);
+    farRightLight.transform.rotation.y = -Math.PI * 0.75; // Merkeze dönük (-135 derece)
+    scene.add(farRightLight);
+
+    // 3. Sol Ön (Yakın Sol)
+    const nearLeftLight = new StadiumLight(app.gl);
+    nearLeftLight.transform.position = new Vec3(-9, 0, 7);
+    nearLeftLight.transform.rotation.y = Math.PI * 0.25; // Merkeze dönük (45 derece)
+    scene.add(nearLeftLight);
+
+    // 4. Sağ Ön (Yakın Sağ)
+    const nearRightLight = new StadiumLight(app.gl);
+    nearRightLight.transform.position = new Vec3(9, 0, 7);
+    nearRightLight.transform.rotation.y = -Math.PI * 0.25; // Merkeze dönük (-45 derece)
+    scene.add(nearRightLight);
 
     const animate = (timestamp) => {
       time.update(timestamp);
