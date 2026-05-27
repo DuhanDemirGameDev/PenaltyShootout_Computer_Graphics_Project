@@ -11,6 +11,7 @@ import { InputManager } from "./interaction/InputManager.js";
 import { Vec3 } from "./math/Vec3.js";
 import { TextureLoader } from "./utils/TextureLoader.js";
 import { Ground } from "./objects/Ground.js";
+import { Ball } from "./objects/Ball.js";
 
 const basicVertexShaderSourceWebGL2 = `#version 300 es
 precision highp float;
@@ -131,15 +132,11 @@ function main() {
     const textureLoader = new TextureLoader(app.gl);
     const grassTexture = textureLoader.loadTexture("assets/textures/grass.jpg");
     const ground = new Ground(app.gl, grassTexture);
-    ground.transform.position = new Vec3(0, 0, 0);
+    scene.add(ground);
 
-
-    const ball = new GameObject({
-      name: "Ball",
-      geometry: new Sphere(app.gl, 0.5, 32, 16),
-      material: { color: new Vec3(0.95, 0.95, 0.9) },
-    });
-    ball.transform.position = new Vec3(0, 0.5, 3);
+    const ballTexture = textureLoader.loadTexture("assets/textures/football.jpg");
+    const ball = new Ball(app.gl, ballTexture);
+    scene.add(ball);
 
     const leftGoalpost = new GameObject({
       name: "Left Goalpost",
@@ -155,8 +152,6 @@ function main() {
     });
     rightGoalpost.transform.position = new Vec3(2.5, 1.5, -7);
 
-    scene.add(ground);
-    scene.add(ball);
     scene.add(leftGoalpost);
     scene.add(rightGoalpost);
 
