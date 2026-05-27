@@ -107,7 +107,7 @@ function main() {
       fragmentSource
     );
     const camera = new Camera({
-      position: new Vec3(0, 10, 30),
+      position: new Vec3(0, 10, 30), //ışıkları görmek için şimdilik değerleri değiştirdim -zeynep
       target: new Vec3(0, 0, 0),
       aspectRatio: app.canvas.width / app.canvas.height,
     });
