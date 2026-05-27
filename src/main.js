@@ -12,6 +12,7 @@ import { Vec3 } from "./math/Vec3.js";
 import { TextureLoader } from "./utils/TextureLoader.js";
 import { Ground } from "./objects/Ground.js";
 import { Ball } from "./objects/Ball.js";
+import { GoalPost } from "./objects/GoalPost.js";
 
 const basicVertexShaderSourceWebGL2 = `#version 300 es
 precision highp float;
@@ -114,6 +115,11 @@ function main() {
 
     shader.use();
     app.clear();
+
+    //AĞ için eklenen WebGL Şeffaflık kodu
+    app.gl.enable(app.gl.BLEND);
+    app.gl.blendFunc(app.gl.SRC_ALPHA, app.gl.ONE_MINUS_SRC_ALPHA);
+
     shader.setMat4("uViewMatrix", camera.getViewMatrix().elements);
     shader.setMat4("uProjectionMatrix", camera.getProjectionMatrix().elements);
 
@@ -126,7 +132,8 @@ function main() {
     // === ZEYNEP'S AREA: MODELING & HIERARCHY ====================
     // Create scene objects here: ground, ball, goalpost, stadium
     // lights, goalkeeper body parts, and parent-child transforms.
-    // Add every visible GameObject to the Scene with scene.add(...).
+    // Add every visible GameOb
+    // ject to the Scene with scene.add(...).
     // ============================================================
 
     const textureLoader = new TextureLoader(app.gl);
@@ -138,22 +145,11 @@ function main() {
     const ball = new Ball(app.gl, ballTexture);
     scene.add(ball);
 
-    const leftGoalpost = new GameObject({
-      name: "Left Goalpost",
-      geometry: new Cylinder(app.gl, 0.1, 3, 24),
-      material: { color: new Vec3(0.85, 0.85, 0.82) },
-    });
-    leftGoalpost.transform.position = new Vec3(-2.5, 1.5, -7);
-
-    const rightGoalpost = new GameObject({
-      name: "Right Goalpost",
-      geometry: new Cylinder(app.gl, 0.1, 3, 24),
-      material: { color: new Vec3(0.85, 0.85, 0.82) },
-    });
-    rightGoalpost.transform.position = new Vec3(2.5, 1.5, -7);
-
-    scene.add(leftGoalpost);
-    scene.add(rightGoalpost);
+    const netTexture = textureLoader.loadTexture("assets/textures/net.png");
+    
+    const goal = new GoalPost(app.gl, netTexture);
+    goal.transform.position = new Vec3(0, 0, -7); 
+    scene.add(goal);
 
     const animate = (timestamp) => {
       time.update(timestamp);
