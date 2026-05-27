@@ -13,7 +13,7 @@ import { TextureLoader } from "./utils/TextureLoader.js";
 import { Ground } from "./objects/Ground.js";
 import { Ball } from "./objects/Ball.js";
 import { GoalPost } from "./objects/GoalPost.js";
-import { StadiumLight } from "./objects/StadiumLights.js";
+import { StadiumLights } from "./objects/StadiumLights.js";
 import { Goalkeeper } from "./objects/Goalkeeper.js";
 
 const basicVertexShaderSourceWebGL2 = `#version 300 es
@@ -138,6 +138,13 @@ function main() {
     // ject to the Scene with scene.add(...).
     // ============================================================
 
+    scene.add(new Ground(app.gl));
+    scene.add(new Ball(app.gl));
+    scene.add(new GoalPost(app.gl));
+    scene.add(new StadiumLights(app.gl));
+    scene.add(new Goalkeeper(app.gl));
+
+    /*
     //ZEMİN
     const textureLoader = new TextureLoader(app.gl);
     const grassTexture = textureLoader.loadTexture("assets/textures/grass.jpg");
@@ -185,7 +192,7 @@ function main() {
     const goalie = new Goalkeeper(app.gl);
     goalie.transform.position = new Vec3(0, 0, -7.5); // Kalenin hemen önüne koyduk
     scene.add(goalie);
-
+*/
     const animate = (timestamp) => {
       time.update(timestamp);
 

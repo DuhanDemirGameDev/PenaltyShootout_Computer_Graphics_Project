@@ -2,9 +2,10 @@ import { GameObject } from "../core/GameObject.js";
 import { Cylinder } from "../geometry/Cylinder.js";
 import { Plane } from "../geometry/Plane.js";
 import { Vec3 } from "../math/Vec3.js";
+import { TextureLoader } from "../utils/TextureLoader.js";
 
 export class GoalPost extends GameObject {
-  constructor(gl,netTexture) {
+  constructor(gl) {
     // Ana (Kök) Obje: Kalenin merkez noktası
     super({ name: "GoalPost Root" });
     
@@ -17,6 +18,8 @@ export class GoalPost extends GameObject {
     // Direklerin rengi
     const postMaterial = { color: new Vec3(0.9, 0.9, 0.9) };
 
+    const textureLoader = new TextureLoader(gl);
+    const netTexture = textureLoader.loadTexture("assets/textures/net.png");
     // Ağ materyali ayarları
     const netMaterial = {
       color: new Vec3(1, 1, 1),
@@ -97,6 +100,7 @@ export class GoalPost extends GameObject {
     // Render motorumuzun bu alt objeleri çizebilmesi için onları bir listeye ekleyelim - manuel hiyerarşi kurduğumuz için ekliyoruz
     this.childrenObjects = [leftPost, rightPost, crossbar, backNet, leftNet, rightNet];
 
+    this.transform.position = new Vec3(0, 0, -7);
     // Kök objenin kendi geometrisi yoktur -sadece çocuklarını taşıyor-
     this.geometry = null; 
   }

@@ -130,6 +130,8 @@ export class Goalkeeper extends GameObject {
 
     // Render listesi
     this.childrenObjects = [torso, head, leftArm, leftGlove, rightArm, rightGlove, leftLeg, leftShoe, rightLeg, rightShoe];
+
+    this.transform.position = new Vec3(0, 0, -7.5);
     this.geometry = null;
   }
 
