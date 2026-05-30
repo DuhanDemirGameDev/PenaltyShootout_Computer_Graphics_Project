@@ -134,4 +134,24 @@ export class ShaderProgram {
       this.attribLocations.clear();
     }
   }
+
+  //Shader'a boolean (true/false) bir değer göndermek için
+  setBool(name, value) {
+    const location = this.getUniformLocation(name);
+
+    if (location !== null) {
+      this.gl.uniform1i(location, value ? 1 : 0);
+    }
+  }
+
+  //Shader'a texture göndermek için
+  setTexture(name, texture, textureUnit = 0) {
+    const location = this.getUniformLocation(name);
+
+    if (location !== null) {
+      this.gl.activeTexture(this.gl.TEXTURE0 + textureUnit); // Aktif doku birimini seç
+      this.gl.bindTexture(this.gl.TEXTURE_2D, texture);      // Dokuyu bağla
+      this.gl.uniform1i(location, textureUnit);              // Shader'a hangi birimi kullanacağını söyle
+    }
+  }
 }
