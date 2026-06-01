@@ -1,58 +1,71 @@
 import { GameObject } from "../core/GameObject.js";
 import { Cuboid } from "../geometry/Cuboid.js";
 import { Vec3 } from "../math/Vec3.js";
-// import { TextureLoader } from "../utils/TextureLoader.js"; // Şimdilik yoruma aldık
+import { TextureLoader } from "../utils/TextureLoader.js";
 
 export class AdBoards extends GameObject {
   constructor(gl) {
     super({ name: "AdBoards Root" });
 
-    // İLERİDE RESİM EKLEMEK İSTEDİĞİNDE ŞU 2 SATIRI AÇABİLİRSİN:
-    // const textureLoader = new TextureLoader(gl);
-    // const adTexture = textureLoader.loadTexture("assets/textures/adboard.jpg");
+    const textureLoader = new TextureLoader(gl);
+    const gaziTex = textureLoader.loadTexture("assets/textures/gazi.png");
+    const acmTex = textureLoader.loadTexture("assets/textures/acm_gazi.png");
+    const ayazTex = textureLoader.loadTexture("assets/textures/ayazjam.png");
 
-    const adMaterial = {
-      color: new Vec3(0.9, 0.9, 0.9), // Şimdilik boş açık gri/beyaz bir pano
-      // texture: adTexture,          // İleride resmi açtığında buradaki "//" işaretini sil
-      useTexture: false               // İleride resim eklediğinde burayı "true" yap
+    const frameMat = { color: new Vec3(0.85, 0.85, 0.85), useTexture: false };
+    const screenGazi = { color: new Vec3(1.15, 1.15, 1.15), texture: gaziTex, useTexture: true };
+    const screenAcm = { color: new Vec3(1.15, 1.15, 1.15), texture: acmTex, useTexture: true };
+    const screenAyaz = { color: new Vec3(1.15, 1.15, 1.15), texture: ayazTex, useTexture: true };
+
+    const boardLength = 6.66;
+    const boardHeight = 1.0;
+    const boardThickness = 0.2;
+    const halfWidth = 10.0;
+
+    this.childrenObjects = [];
+
+    const createAdPanel = (name, xOffset, screenMat) => {
+      const panelRoot = new GameObject({ name });
+
+      const frame = new GameObject({
+        name: `${name} Frame`,
+        geometry: new Cuboid(gl, boardLength, boardHeight, boardThickness),
+        material: frameMat
+      });
+
+      const screen = new GameObject({
+        name: `${name} Screen`,
+        geometry: new Cuboid(gl, boardLength, boardHeight, 0.02),
+        material: screenMat
+      });
+      screen.transform.position = new Vec3(0, 0, (boardThickness / 2) + 0.01);
+
+      panelRoot.transform.addChild(frame.transform);
+      panelRoot.transform.addChild(screen.transform);
+      panelRoot.transform.position = new Vec3(xOffset, boardHeight / 2, 0);
+
+      this.childrenObjects.push(frame, screen);
+      return panelRoot;
     };
 
-    const boardLength = 18.0; 
-    const boardHeight = 1.0;  
-    const boardThickness = 0.2;
+    const createSideBoards = (namePrefix, posX, posZ, rotationY) => {
+      const parent = new GameObject({ name: `${namePrefix} Boards Parent` });
 
-    // 1. SOL PANO
-    const leftBoard = new GameObject({
-      name: "Left AdBoard",
-      geometry: new Cuboid(gl, boardLength, boardHeight, boardThickness),
-      material: adMaterial
-    });
-    leftBoard.transform.position = new Vec3(-9.5, boardHeight / 2, 0);
-    leftBoard.transform.rotation.y = Math.PI / 2; 
+      parent.transform.addChild(createAdPanel(`${namePrefix} P1`, -6.66, screenGazi).transform);
+      parent.transform.addChild(createAdPanel(`${namePrefix} P2`, 0, screenAcm).transform);
+      parent.transform.addChild(createAdPanel(`${namePrefix} P3`, 6.66, screenAyaz).transform);
 
-    // 2. SAĞ PANO
-    const rightBoard = new GameObject({
-      name: "Right AdBoard",
-      geometry: new Cuboid(gl, boardLength, boardHeight, boardThickness),
-      material: adMaterial
-    });
-    rightBoard.transform.position = new Vec3(9.5, boardHeight / 2, 0);
-    rightBoard.transform.rotation.y = -Math.PI / 2;
+      parent.transform.position = new Vec3(posX, 0, posZ);
+      parent.transform.rotation.y = rotationY;
 
-    // 3. ARKA PANO (Kalenin Arkası)
-    const backBoard = new GameObject({
-      name: "Back AdBoard",
-      geometry: new Cuboid(gl, boardLength + 1, boardHeight, boardThickness),
-      material: adMaterial
-    });
-    backBoard.transform.position = new Vec3(0, boardHeight / 2, -9.5);
+      return parent;
+    };
 
-    // Panoları köke bağlıyoruz
-    this.transform.addChild(leftBoard.transform);
-    this.transform.addChild(rightBoard.transform);
-    this.transform.addChild(backBoard.transform);
+    this.transform.addChild(createSideBoards("Left", -halfWidth, 0, Math.PI / 2).transform);
+    this.transform.addChild(createSideBoards("Right", halfWidth, 0, -Math.PI / 2).transform);
+    this.transform.addChild(createSideBoards("Back", 0, -halfWidth, 0).transform);
+    this.transform.addChild(createSideBoards("Front", 0, halfWidth, Math.PI).transform);
 
-    this.childrenObjects = [leftBoard, rightBoard, backBoard];
     this.geometry = null;
   }
 
