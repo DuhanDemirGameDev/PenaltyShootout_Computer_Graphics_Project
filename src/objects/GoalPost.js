@@ -89,6 +89,14 @@ export class GoalPost extends GameObject {
     rightNet.transform.rotation.x = Math.PI / 2;
     rightNet.transform.rotation.y = -Math.PI / 2;
 
+    const topNet = new GameObject({
+      name: "Top Net",
+      geometry: new Plane(gl, crossbarWidth, netDepth, 1), // Genişlik x Derinlik
+      material: netMaterial,
+    });
+    // Yukarı kaldır ve arkaya doğru ortala
+    topNet.transform.position = new Vec3(0, postHeight, -netDepth / 2);
+
     //Hiyerarşiye Tüm Parçaları Ekleme
     this.transform.addChild(leftPost.transform);
     this.transform.addChild(rightPost.transform);
@@ -96,9 +104,10 @@ export class GoalPost extends GameObject {
     this.transform.addChild(backNet.transform);
     this.transform.addChild(leftNet.transform);
     this.transform.addChild(rightNet.transform);
+    this.transform.addChild(topNet.transform);
 
     // Render motorumuzun bu alt objeleri çizebilmesi için onları bir listeye ekleyelim - manuel hiyerarşi kurduğumuz için ekliyoruz
-    this.childrenObjects = [leftPost, rightPost, crossbar, backNet, leftNet, rightNet];
+    this.childrenObjects = [leftPost, rightPost, crossbar, backNet, leftNet, rightNet, topNet];
 
     this.transform.position = new Vec3(0, 0, -7);
     // Kök objenin kendi geometrisi yoktur -sadece çocuklarını taşıyor-
