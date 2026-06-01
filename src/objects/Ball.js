@@ -13,7 +13,8 @@ export class Ball extends GameObject {
 
     // Yarıçapı 0.3 olan küre geometrisi
     const ballRadius = 0.3;
-    this.geometry = new Sphere(gl, ballRadius, 20, 20);
+    this.geometry = new Sphere(gl, ballRadius,64, 64);
+    this.transform.rotation.x = Math.PI * 0.75;
     
     this.material = {
       color: new Vec3(1, 1, 1),
@@ -23,5 +24,6 @@ export class Ball extends GameObject {
 
     // Topun merkez noktası ortasında olduğu için, çimin içine batmasın diye yarıçapı kadar (0.3) yukarı kaldırarak tam zemine oturtuyoruz.
     this.transform.position = new Vec3(0, ballRadius, 0);
+
   }
 }

@@ -11,6 +11,7 @@ import { ShaderProgram } from "./core/ShaderProgram.js";
 import { Time } from "./core/Time.js";
 import { InputManager } from "./interaction/InputManager.js";
 import { Vec3 } from "./math/Vec3.js";
+import { AdBoards } from "./objects/AdBoards.js";
 
 // Shader kaynakları
 import { basicVertexShader, basicFragmentShader, shadowVertexShader, shadowFragmentShader } from "./shaders/ShaderSources.js";
@@ -64,6 +65,7 @@ function main() {
     scene.add(new GoalPost(app.gl));
     scene.add(new StadiumLights(app.gl));
     scene.add(new Goalkeeper(app.gl));
+    scene.add(new AdBoards(app.gl));
 
     // --- Işıklar ve Gölge ---
     const lightTarget = new Vec3(0, 0, -3);

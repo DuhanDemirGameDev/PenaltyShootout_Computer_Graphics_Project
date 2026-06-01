@@ -87,7 +87,7 @@ export class GameStateMachine {
     if (gkSlider && gkObj) {
       gkObj.transform.position.x = parseFloat(gkSlider.value);
       gkObj.transform.rotation.z = 0;
-      gkObj.transform.position.y = 0.9;
+      gkObj.transform.position.y = 0.0;
     }
 
     // Crosshair klavye hareketi
