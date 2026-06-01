@@ -14,6 +14,7 @@ export class Light {
     this.position = position;
     this.color = color;
     this.intensity = intensity;
+    this.enabled = true; // Varsayılan olarak ışık açık
   }
 
   /**
@@ -23,6 +24,9 @@ export class Light {
    */
   setUniforms(shader, index) {
     shader.setVec3(`uLightPos[${index}]`, this.position);
-    shader.setVec3(`uLightColor[${index}]`, this.color);
+    
+    // Işık sönükse shader'a rengi (0, 0, 0) olarak yollayarak aydınlatmasını sıfırlıyoruz
+    const finalColor = this.enabled ? this.color : new Vec3(0, 0, 0);
+    shader.setVec3(`uLightColor[${index}]`, finalColor);
   }
 }

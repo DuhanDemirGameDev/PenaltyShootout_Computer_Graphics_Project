@@ -131,8 +131,118 @@ export class Goalkeeper extends GameObject {
     // Render listesi
     this.childrenObjects = [torso, head, leftArm, leftGlove, rightArm, rightGlove, leftLeg, leftShoe, rightLeg, rightShoe];
 
-    this.transform.position = new Vec3(0, 0, -7.5);
+    this.joints = {
+      torso,
+      head,
+      leftShoulder,
+      rightShoulder,
+      leftHip,
+      rightHip,
+      leftArm,
+      rightArm,
+      leftLeg,
+      rightLeg
+    };
+
+    // Kaleciyi kale çizgisinin tam önüne konumlandırıyoruz (Kale çizgisi Z = -7)
+    this.transform.position = new Vec3(0, 0, -6.3);
     this.geometry = null;
+
+    // Hazır duruşunu başlangıçta uygula
+    this.setDiveProgress(0, this.transform.position, this.transform.position);
+  }
+
+  /**
+   * Kalecinin dalış ve sıçrama animasyonunu eklemleriyle birlikte gerçekçi şekilde yönetir.
+   * @param {number} t - İlerleme oranı (0.0 -> 1.0)
+   * @param {Vec3} start - Başlangıç pozisyonu
+   * @param {Vec3} target - Hedef pozisyonu
+   */
+  setDiveProgress(t, start, target) {
+    if (t === 0) {
+      // Başlangıç/Hazır Duruşu
+      this.transform.position.x = start.x;
+      this.transform.position.y = 0;
+      this.transform.rotation = new Vec3(0, 0, 0);
+
+      // Dizler bükülü, gövde hafif öne eğik, kollar açık hazır bekleyiş duruşu
+      this.joints.torso.transform.rotation = new Vec3(0.15, 0, 0);
+      this.joints.head.transform.rotation = new Vec3(-0.05, 0, 0);
+      this.joints.leftShoulder.transform.rotation = new Vec3(0.1, 0, 0.35);
+      this.joints.rightShoulder.transform.rotation = new Vec3(0.1, 0, -0.35);
+      this.joints.leftHip.transform.rotation = new Vec3(-0.25, 0, 0);
+      this.joints.rightHip.transform.rotation = new Vec3(-0.25, 0, 0);
+      return;
+    }
+
+    const easeOutQuad = (x) => 1 - (1 - x) * (1 - x);
+
+    // 1. Yatay (X) Hareket (Gideceği noktaya kavisli hızlı ivmelenme)
+    const tX = easeOutQuad(t);
+    const x = start.x + (target.x - start.x) * tX;
+
+    // 2. Dikey (Y) Zıplama - Çömelme ve ardından Parabolik Sıçrama (Fizik tabanlı)
+    let y = 0;
+    const crouchDuration = 0.15; // İlk %15 çömelme süresi
+    if (t < crouchDuration) {
+      const cp = t / crouchDuration;
+      y = -0.32 * Math.sin(cp * Math.PI); // Hafif yaylanıp çömelme payı
+
+      // Çömelirken eklemlerin bükülmesi
+      this.joints.torso.transform.rotation = new Vec3(0.15 + 0.22 * cp, 0, 0);
+      this.joints.head.transform.rotation = new Vec3(-0.05 - 0.03 * cp, 0, 0);
+      this.joints.leftHip.transform.rotation = new Vec3(-0.25 - 0.3 * cp, 0, 0);
+      this.joints.rightHip.transform.rotation = new Vec3(-0.25 - 0.3 * cp, 0, 0);
+      this.joints.leftShoulder.transform.rotation = new Vec3(0.1, 0, 0.35 + 0.18 * cp);
+      this.joints.rightShoulder.transform.rotation = new Vec3(0.1, 0, -0.35 - 0.18 * cp);
+      
+      this.transform.rotation = new Vec3(0, 0, 0);
+    } else {
+      const lp = (t - crouchDuration) / (1 - crouchDuration); // Sıçrama/Uçuş süreci (0.0 -> 1.0)
+      
+      // Zıplama yüksekliği interpolasyonu + Yerçekimine karşı yukarı uçuş yayı
+      const baseHeight = 0 + (target.y - 0) * lp;
+      const jumpArc = Math.sin(lp * Math.PI) * 0.9; // Havaya sıçrama yayı
+      y = baseHeight + jumpArc;
+
+      // Kalecinin tüm gövdesini dalış açısına göre döndür
+      const direction = target.x - start.x; // < 0 sola dalış, > 0 sağa dalış
+      const diveAngle = direction * 0.45; // Dalış yatış açısı derecesi
+      this.transform.rotation = new Vec3(0, 0, -diveAngle * lp);
+
+      // Gövdeyi dalış yönüne göre hafifçe döndür
+      this.joints.torso.transform.rotation = new Vec3(0, direction * 0.15 * lp, 0);
+      this.joints.head.transform.rotation = new Vec3(0, 0, 0);
+
+      // Eklemlerin dalış yönüne göre gerilmesi (Gerçekçi uçuş pozu)
+      if (direction < -0.2) {
+        // SOLA DALIŞ (Kollar sola doğru uzanır)
+        this.joints.leftShoulder.transform.rotation = new Vec3(-0.1 * lp, 0, (Math.PI * 0.65) * lp);
+        this.joints.rightShoulder.transform.rotation = new Vec3(0, 0, -(Math.PI * 0.8) * lp);
+        
+        // Bacakların havada gerilmesi (Sol bacak bükülür, sağ bacak gerilir)
+        this.joints.leftHip.transform.rotation = new Vec3(-0.1 * lp, 0, -0.35 * lp);
+        this.joints.rightHip.transform.rotation = new Vec3(-0.3 * lp, 0, -0.5 * lp);
+      } else if (direction > 0.2) {
+        // SAĞA DALIŞ (Kollar sağa doğru uzanır)
+        this.joints.rightShoulder.transform.rotation = new Vec3(-0.1 * lp, 0, -(Math.PI * 0.65) * lp);
+        this.joints.leftShoulder.transform.rotation = new Vec3(0, 0, (Math.PI * 0.8) * lp);
+        
+        // Bacakların havada gerilmesi (Sağ bacak bükülür, sol bacak gerilir)
+        this.joints.rightHip.transform.rotation = new Vec3(-0.1 * lp, 0, 0.35 * lp);
+        this.joints.leftHip.transform.rotation = new Vec3(-0.3 * lp, 0, 0.5 * lp);
+      } else {
+        // ORTAYA / DÜZ ZIPLAMA (İki kol birden havaya kalkar)
+        this.joints.leftShoulder.transform.rotation = new Vec3(0, 0, (Math.PI * 0.65) * lp);
+        this.joints.rightShoulder.transform.rotation = new Vec3(0, 0, -(Math.PI * 0.65) * lp);
+        
+        this.joints.leftHip.transform.rotation = new Vec3(-0.15 * lp, 0, -0.2 * lp);
+        this.joints.rightHip.transform.rotation = new Vec3(-0.15 * lp, 0, 0.2 * lp);
+      }
+    }
+
+    this.transform.position.x = x;
+    this.transform.position.y = y;
   }
 
   render(gl, shaderProgram, camera) {

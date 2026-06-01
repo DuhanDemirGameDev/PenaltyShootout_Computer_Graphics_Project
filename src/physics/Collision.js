@@ -44,7 +44,12 @@ export class Collision {
     }
 
     // 2. Kale sınırları içinde mi? (gol kontrolü)
-    if (ballPos.z <= -6.4 && ballPos.x > -2.4 && ballPos.x < 2.4 && ballPos.y < 2.6) {
+    // Standard FIFA kalesi iç alan ölçüleri: Direkler X: -3.66 ile 3.66 arasındadır. Direk kalınlıklarını düşerek [-3.55, 3.55] yapıyoruz.
+    // Üst direk yüksekliği 3.0m, kalınlığı düşerek [0.15, 2.9] yapıyoruz.
+    const inGoalX = ballPos.x > -3.55 && ballPos.x < 3.55;
+    const inGoalY = ballPos.y > 0.15 && ballPos.y < 2.9;
+
+    if (ballPos.z <= -6.4 && inGoalX && inGoalY) {
       return ShotResult.GOAL;
     }
 

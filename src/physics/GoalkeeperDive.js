@@ -16,11 +16,17 @@ export class GoalkeeperDive {
    * @returns {Vec3} Kalecinin dalış hedef pozisyonu
    */
   static computeTarget(gkStartPos, ballTargetPos, sideSpin) {
-    const predictionError = (Math.random() - 0.5) * 1.2;
-    const finalFalsoX = ballTargetPos.x + sideSpin + predictionError;
+    const predictionError = (Math.random() - 0.5) * 0.8;
+    const finalTargetX = ballTargetPos.x + sideSpin + predictionError;
 
-    const gkMaxReachX = Math.max(-2.1, Math.min(2.1, finalFalsoX));
-    const gkMaxReachY = Math.max(0.5, Math.min(2.0, ballTargetPos.y * 0.75));
+    // Gerçekçi sıçrama menzili sınırlaması: Kaleci durduğu yerden en fazla 1.85 metre yana zıplayabilir.
+    const maxLeap = 1.85;
+    const minX = gkStartPos.x - maxLeap;
+    const maxX = gkStartPos.x + maxLeap;
+
+    // Kalecinin uzanabileceği nihai hedef koordinatı sınırı
+    const gkMaxReachX = Math.max(minX, Math.max(-2.2, Math.min(2.2, Math.min(maxX, finalTargetX))));
+    const gkMaxReachY = Math.max(0.5, Math.min(2.0, ballTargetPos.y * 0.78));
 
     return new Vec3(gkMaxReachX, gkMaxReachY, gkStartPos.z);
   }

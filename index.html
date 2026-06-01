@@ -90,6 +90,15 @@
       color: #eee;
       display: none;
     }
+
+    .ui-panel h3 {
+      margin: 14px 0 2px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
   </style>
 </head>
 <body>
@@ -126,7 +135,63 @@
 
     <label for="lightIntensity">
       Spotlight Intensity
-      <input id="lightIntensity" type="range" min="0" max="5" step="0.1" value="1.5">
+      <input id="lightIntensity" type="range" min="0" max="15" step="0.2" value="2.5">
+    </label>
+
+    <label for="lightMovementSpeed">
+      Spotlight Movement Speed
+      <input id="lightMovementSpeed" type="range" min="0" max="5" step="0.1" value="1.0">
+    </label>
+
+    <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.12); margin: 12px 0 4px 0;">
+    <h3>Işık Konum Kontrolü</h3>
+
+    <label for="selectedLightIndex" style="margin-bottom: 8px;">
+      Kontrol Edilecek Işık Kulesi
+      <select id="selectedLightIndex" style="width: 100%; background: #2a2a2a; color: white; border: 1px solid #555; padding: 6px; border-radius: 4px; font-size: 13px; margin-top: 4px; cursor: pointer;">
+        <option value="0">Işık Kulesi 1 (Sol-Arka)</option>
+        <option value="1">Işık Kulesi 2 (Sağ-Arka)</option>
+        <option value="2" selected>Işık Kulesi 3 (Sol-Ön / Ana)</option>
+        <option value="3">Işık Kulesi 4 (Sağ-Ön)</option>
+      </select>
+    </label>
+
+    <label for="lightPosX">
+      Seçili Işık Konumu X
+      <input id="lightPosX" type="range" min="-15" max="15" step="0.2" value="-9">
+    </label>
+
+    <label for="lightPosY">
+      Seçili Işık Konumu Y
+      <input id="lightPosY" type="range" min="3" max="22" step="0.2" value="8">
+    </label>
+
+    <label for="lightPosZ">
+      Seçili Işık Konumu Z
+      <input id="lightPosZ" type="range" min="-15" max="15" step="0.2" value="7">
+    </label>
+
+    <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.12); margin: 12px 0 4px 0;">
+    <h3>Aktif Işık Kuleleri</h3>
+    
+    <label style="display: flex; flex-direction: row; align-items: center; gap: 8px; margin-top: 6px; cursor: pointer; font-size: 13px;">
+      <input id="light1Enabled" type="checkbox" checked style="width: 16px; height: 16px; margin: 0; cursor: pointer;">
+      Işık Kulesi 1 (Sol-Arka)
+    </label>
+
+    <label style="display: flex; flex-direction: row; align-items: center; gap: 8px; margin-top: 6px; cursor: pointer; font-size: 13px;">
+      <input id="light2Enabled" type="checkbox" checked style="width: 16px; height: 16px; margin: 0; cursor: pointer;">
+      Işık Kulesi 2 (Sağ-Arka)
+    </label>
+
+    <label style="display: flex; flex-direction: row; align-items: center; gap: 8px; margin-top: 6px; cursor: pointer; font-size: 13px;">
+      <input id="light3Enabled" type="checkbox" checked style="width: 16px; height: 16px; margin: 0; cursor: pointer;">
+      Işık Kulesi 3 (Sol-Ön / Ana)
+    </label>
+
+    <label style="display: flex; flex-direction: row; align-items: center; gap: 8px; margin-top: 6px; cursor: pointer; font-size: 13px;">
+      <input id="light4Enabled" type="checkbox" checked style="width: 16px; height: 16px; margin: 0; cursor: pointer;">
+      Işık Kulesi 4 (Sağ-Ön)
     </label>
   </aside>
 

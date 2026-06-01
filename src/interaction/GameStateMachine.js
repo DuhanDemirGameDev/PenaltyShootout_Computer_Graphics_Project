@@ -49,6 +49,16 @@ export class GameStateMachine {
     this.goalsCount = 0;
     this.savesCount = 0;
 
+    // Kaleci kurtarma sekme fiziği değişkenleri
+    this.hasSavedBall = false;
+    this.saveProgressT = 0.0;
+    this.saveBounceStart = null;
+    this.saveBounceDirection = null;
+
+    // Gol değerlendirme ve 3 saniyelik kutlama geciktirme değişkenleri
+    this.resultEvaluated = false;
+    this.shotResult = null;
+
     // Mouse durumu
     this.mouseReleased = false;
     window.addEventListener("mouseup", () => { this.mouseReleased = false; });
@@ -86,8 +96,12 @@ export class GameStateMachine {
     const gkSlider = document.getElementById("goalkeeperX");
     if (gkSlider && gkObj) {
       gkObj.transform.position.x = parseFloat(gkSlider.value);
-      gkObj.transform.rotation.z = 0;
-      gkObj.transform.position.y = 0.0;
+      if (typeof gkObj.setDiveProgress === "function") {
+        gkObj.setDiveProgress(0, gkObj.transform.position, gkObj.transform.position);
+      } else {
+        gkObj.transform.rotation.z = 0;
+        gkObj.transform.position.y = 0.0;
+      }
     }
 
     // Crosshair klavye hareketi
@@ -97,9 +111,9 @@ export class GameStateMachine {
     if (input.isKeyDown("ArrowUp")) crosshair.transform.position.y += moveSpeed;
     if (input.isKeyDown("ArrowDown")) crosshair.transform.position.y -= moveSpeed;
 
-    // Crosshair sınırları
-    crosshair.transform.position.x = Math.max(-2.4, Math.min(2.4, crosshair.transform.position.x));
-    crosshair.transform.position.y = Math.max(0.2, Math.min(2.6, crosshair.transform.position.y));
+    // Crosshair sınırları (Standard kale sınırlarına ve 90 köşelere ulaşabilmesi için genişletildi)
+    crosshair.transform.position.x = Math.max(-3.5, Math.min(3.5, crosshair.transform.position.x));
+    crosshair.transform.position.y = Math.max(0.2, Math.min(2.9, crosshair.transform.position.y));
 
     // Topa tıklama — spin hesabı ve CHARGING'e geçiş
     if (input.wasMouseClicked()) {
@@ -118,6 +132,8 @@ export class GameStateMachine {
         if (hitPoint) {
           const hitOffsetX = hitPoint.x - ballObject.transform.position.x;
           const hitOffsetY = hitPoint.y - ballObject.transform.position.y;
+          
+          // Orijinal tıklama konumuna göre kavis katsayılarına geri dönüyoruz
           this.sideSpin = -hitOffsetX * 6.5;
           this.verticalSpin = -hitOffsetY * 3.5;
 
@@ -196,12 +212,6 @@ export class GameStateMachine {
   updateShooting(deltaTime, ballObject, gkObj) {
     this.shotProgress += deltaTime / this.shotDuration;
 
-    let isFinished = false;
-    if (this.shotProgress >= 1.0) {
-      this.shotProgress = 1.0;
-      isFinished = true;
-    }
-
     const t = this.shotProgress;
 
     // Top pozisyonunu hesapla
@@ -209,41 +219,117 @@ export class GameStateMachine {
       t, this.ballStartPosition, this.ballTargetPosition,
       this.sideSpin, this.verticalSpin, this.arcHeight
     );
-    if (ballObject) ballObject.transform.position = ballPos;
+
+    // Kaleci kurtarma anını sürekli havada denetle (t > 0.65 iken top kaleciye ulaşır)
+    if (!this.hasSavedBall && gkObj && t > 0.65 && t < 0.95) {
+      const gkPos = gkObj.transform.position;
+      const dx = ballPos.x - gkPos.x;
+      const dy = ballPos.y - gkPos.y;
+      const dz = ballPos.z - gkPos.z;
+      const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+      if (dist < 1.1) {
+        // Güç oranına göre kurtarma şansını hesapla (Collision.js mantığı)
+        const shotPowerRatio = this.shotPower / this.maxPower;
+        const isGkSave = !(shotPowerRatio > 0.7 && Math.random() < 0.35);
+
+        if (isGkSave) {
+          this.hasSavedBall = true;
+          this.saveProgressT = t;
+          this.saveBounceStart = new Vec3(ballPos.x, ballPos.y, ballPos.z);
+          // Kalecinin eline çarpıp sahaya geri sekme vektörü (Z sahanın içine doğru pozitif)
+          this.saveBounceDirection = new Vec3(
+            (dx + (Math.random() - 0.5) * 0.4) * 0.4,
+            0.6 + Math.random() * 0.4,
+            1.5 + Math.random() * 0.8
+          );
+        }
+      }
+    }
+
+    let finalBallPos = ballPos;
+    if (this.hasSavedBall) {
+      // Top kaleciye çarptıysa sahanın içine sekip yerde kalır, arkaya sızmaz
+      const tb = (t - this.saveProgressT) / (1.0 - this.saveProgressT + 0.001);
+      const bounceX = this.saveBounceStart.x + this.saveBounceDirection.x * tb;
+      const bounceY = Math.max(0.3, this.saveBounceStart.y + this.saveBounceDirection.y * Math.sin(tb * Math.PI) - 0.5 * tb);
+      const bounceZ = this.saveBounceStart.z + this.saveBounceDirection.z * tb;
+      finalBallPos = new Vec3(bounceX, bounceY, bounceZ);
+    }
+
+    if (ballObject) {
+      ballObject.transform.position = finalBallPos;
+
+      // Realistik Top Spini (Görsel Dönen Top Etkisi)
+      const rotationSpeed = 24.0; // Dönme hızı katsayısı
+      
+      // Dikey spin (backspin / topspin) X eksenindeki dönüşü etkiler (ileri doğru yuvarlanma dahil)
+      ballObject.transform.rotation.x += deltaTime * rotationSpeed * (1.2 + this.verticalSpin * 0.4);
+      
+      // Yatay spin (falso) Y ekseninde güçlü bir dönme oluşturur
+      ballObject.transform.rotation.y += deltaTime * this.sideSpin * 8.0;
+      
+      // Z ekseninde hafif salınım (tumble) spini
+      ballObject.transform.rotation.z += deltaTime * rotationSpeed * 0.15;
+    }
 
     // Kaleci interpolasyonu
     if (gkObj && this.gkStartPosition && this.gkTargetPosition) {
-      const dive = GoalkeeperDive.interpolate(t, this.gkStartPosition, this.gkTargetPosition);
-      gkObj.transform.position.x = dive.x;
-      gkObj.transform.position.y = dive.y;
-      gkObj.transform.rotation.z = dive.rotationZ;
+      if (typeof gkObj.setDiveProgress === "function") {
+        gkObj.setDiveProgress(Math.min(1.0, t), this.gkStartPosition, this.gkTargetPosition);
+      } else {
+        const dive = GoalkeeperDive.interpolate(Math.min(1.0, t), this.gkStartPosition, this.gkTargetPosition);
+        gkObj.transform.position.x = dive.x;
+        gkObj.transform.position.y = dive.y;
+        gkObj.transform.rotation.z = dive.rotationZ;
+      }
+    }
+
+    // Gol / kurtarış veya direkten sekme sonucunu tam çizgi geçiş anında (t = 1.0) değerlendir (FIFA gibi akıcı)
+    if (!this.resultEvaluated && t >= 1.0) {
+      this.resultEvaluated = true;
+      
+      // Direk temas kontrolü
+      const target = this.ballTargetPosition;
+      const hitLeft = Math.abs(target.x - (-3.66)) < 0.35 && target.y < 3.1;
+      const hitRight = Math.abs(target.x - 3.66) < 0.35 && target.y < 3.1;
+      const hitCrossbar = Math.abs(target.y - 3.0) < 0.35 && Math.abs(target.x) < 3.76;
+      const hitPost = hitLeft || hitRight || hitCrossbar;
+
+      if (hitPost) {
+        this.shotResult = ShotResult.MISS;
+        this.ui.showScreenMessage("DİREKTEN DÖNDÜ! 💥", "msg-miss");
+      } else if (this.hasSavedBall) {
+        this.shotResult = ShotResult.SAVE;
+        this.savesCount++;
+        this.ui.updateScore(this.goalsCount, this.savesCount);
+        this.ui.showScreenMessage("KAPTI! 🧤", "msg-save");
+      } else {
+        this.shotResult = Collision.checkShotResult(
+          ballPos,
+          gkObj ? gkObj.transform.position : null,
+          this.shotPower,
+          this.maxPower
+        );
+
+        if (this.shotResult === ShotResult.GOAL) {
+          this.goalsCount++;
+          this.ui.updateScore(this.goalsCount, this.savesCount);
+          this.ui.showScreenMessage("GOOOL! ⚽🏆", "msg-goal");
+        } else {
+          this.ui.showScreenMessage("DIŞARIYA! ❌", "msg-miss");
+        }
+      }
+    }
+
+    // Şutu anında bitirme, topun 3 saniye boyunca ağlara süzülmesini veya sahaya sekmesini sağla (t = 3.5'e kadar)
+    let isFinished = false;
+    if (this.shotProgress >= 3.5) {
+      isFinished = true;
     }
 
     // Şut tamamlandıysa sonuç kontrolü
     if (isFinished) {
-      const result = Collision.checkShotResult(
-        ballObject.transform.position,
-        gkObj ? gkObj.transform.position : null,
-        this.shotPower,
-        this.maxPower
-      );
-
-      switch (result) {
-        case ShotResult.SAVE:
-          this.savesCount++;
-          this.ui.updateScore(this.goalsCount, this.savesCount);
-          this.ui.showScreenMessage("KAPTI! 🧤", "msg-save");
-          break;
-        case ShotResult.GOAL:
-          this.goalsCount++;
-          this.ui.updateScore(this.goalsCount, this.savesCount);
-          this.ui.showScreenMessage("GOOOL! ⚽🏆", "msg-goal");
-          break;
-        case ShotResult.MISS:
-          this.ui.showScreenMessage("DIŞARIYA! ❌", "msg-miss");
-          break;
-      }
-
       this.ui.showResetHint();
       this.state = GameState.FINISHED;
     }
@@ -256,6 +342,12 @@ export class GameStateMachine {
     if (input.wasKeyPressed("Space")) {
       if (ballObject) ballObject.transform.position = new Vec3(0, 0.5, 3);
       crosshair.transform.position = new Vec3(0, 1.5, -6.5);
+
+      this.hasSavedBall = false;
+      this.saveBounceDirection = null;
+      this.saveProgressT = 0.0;
+      this.resultEvaluated = false;
+      this.shotResult = null;
 
       this.ui.hideScreenMessage();
       this.ui.hideResetHint();

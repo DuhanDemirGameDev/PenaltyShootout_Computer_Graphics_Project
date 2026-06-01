@@ -78,7 +78,47 @@ export class CameraControls {
     this.distance = Math.max(this.minDistance, Math.min(this.maxDistance, this.distance));
   }
 
-  update() {
+  update(input, deltaTime = 0.016) {
+    if (input) {
+      const speed = 18.0; // Kamera kaydırma hızı
+      const forward = this.camera.front;
+      const right = forward.cross(this.camera.up).normalize();
+
+      // Standart oyunlardaki gibi yatay (XZ) düzlemde hareket etmek için vektörleri projekte ediyoruz
+      let forwardXZ = new Vec3(forward.x, 0, forward.z);
+      if (forwardXZ.length() > 0.001) {
+        forwardXZ = forwardXZ.normalize();
+      } else {
+        forwardXZ = new Vec3(0, 0, -1);
+      }
+
+      let rightXZ = new Vec3(right.x, 0, right.z);
+      if (rightXZ.length() > 0.001) {
+        rightXZ = rightXZ.normalize();
+      } else {
+        rightXZ = new Vec3(1, 0, 0);
+      }
+
+      let moveDir = new Vec3(0, 0, 0);
+      if (input.isKeyDown("KeyW")) {
+        moveDir = moveDir.add(forwardXZ);
+      }
+      if (input.isKeyDown("KeyS")) {
+        moveDir = moveDir.subtract(forwardXZ);
+      }
+      if (input.isKeyDown("KeyD")) {
+        moveDir = moveDir.add(rightXZ);
+      }
+      if (input.isKeyDown("KeyA")) {
+        moveDir = moveDir.subtract(rightXZ);
+      }
+
+      if (moveDir.length() > 0) {
+        moveDir = moveDir.normalize();
+        this.target = this.target.add(moveDir.multiply(speed * deltaTime));
+      }
+    }
+
     const x = this.distance * Math.cos(this.pitch) * Math.sin(this.yaw);
     const y = this.distance * Math.sin(this.pitch);
     const z = this.distance * Math.cos(this.pitch) * Math.cos(this.yaw);
