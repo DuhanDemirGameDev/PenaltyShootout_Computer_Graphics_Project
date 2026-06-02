@@ -69,11 +69,11 @@ function main() {
 
     // --- Işıklar ve Gölge ---
     const lightTarget = new Vec3(0, 0, -3);
-    // Task 2: Spotlight intensity başlangıç değeri 1.0 olarak ayarlandı
-    const light1 = new Spotlight({ position: new Vec3(-9, 8, -9), target: lightTarget, intensity: 1.0 });
-    const light2 = new Spotlight({ position: new Vec3( 9, 8, -9), target: lightTarget, intensity: 1.0 });
-    const light3 = new Spotlight({ position: new Vec3(-9, 8,  7), target: lightTarget, intensity: 1.0 });
-    const light4 = new Spotlight({ position: new Vec3( 9, 8,  7), target: lightTarget, intensity: 1.0 });
+    // Spotlight intensity başlangıç değeri 0.5 olarak ayarlandı (aşırı parlamayı önler, gölgeleri belirginleştirir)
+    const light1 = new Spotlight({ position: new Vec3(-9, 8, -9), target: lightTarget, intensity: 0.5 });
+    const light2 = new Spotlight({ position: new Vec3( 9, 8, -9), target: lightTarget, intensity: 0.5 });
+    const light3 = new Spotlight({ position: new Vec3(-9, 8,  7), target: lightTarget, intensity: 0.5 });
+    const light4 = new Spotlight({ position: new Vec3( 9, 8,  7), target: lightTarget, intensity: 0.5 });
 
     scene.addLight(light1);
     scene.addLight(light2);

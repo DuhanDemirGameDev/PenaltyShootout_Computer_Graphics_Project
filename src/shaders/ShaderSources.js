@@ -87,10 +87,23 @@ float calcShadow(sampler2D shadowMap, vec4 sc) {
       proj.y < 0.0 || proj.y > 1.0 ||
       proj.z > 1.0) return 0.0;
 
-  float closest = texture(shadowMap, proj.xy).r;
   float current = proj.z;
-  float bias = 0.0005;
-  return (current - bias > closest) ? 0.55 : 0.0;
+  float bias = 0.0015; // PCF için uygun bias değeri
+  float shadow = 0.0;
+
+  // 3x3 PCF Filtreleme
+  vec2 texelSize = 1.0 / vec2(textureSize(shadowMap, 0));
+  for (int x = -1; x <= 1; ++x) {
+    for (int y = -1; y <= 1; ++y) {
+      float closest = texture(shadowMap, proj.xy + vec2(x, y) * texelSize).r;
+      if (current - bias > closest) {
+        shadow += 1.0;
+      }
+    }
+  }
+  shadow /= 9.0;
+
+  return shadow * 0.85; // Gölge şiddetini 0.85 yaparak daha belirgin ve gerçekçi gölgeler oluşturuyoruz
 }
 
 void main() {
@@ -106,7 +119,7 @@ void main() {
   vec3 V = normalize(uCameraPos - vWorldPos);
 
   // Ambient
-  vec3 ambient = 0.18 * baseColor;
+  vec3 ambient = 0.08 * baseColor;
 
   // Diffuse + Specular (tüm ışıklardan ayrı ayrı gölge etkisiyle toplanır)
   vec3 diffuseSum = vec3(0.0);

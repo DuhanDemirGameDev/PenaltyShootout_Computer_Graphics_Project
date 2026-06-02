@@ -20,9 +20,9 @@ export class ShadowMap {
     this.depthTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this.depthTexture);
     gl.texImage2D(
-      gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT32F,
+      gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT24,
       width, height, 0,
-      gl.DEPTH_COMPONENT, gl.FLOAT, null
+      gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null
     );
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
