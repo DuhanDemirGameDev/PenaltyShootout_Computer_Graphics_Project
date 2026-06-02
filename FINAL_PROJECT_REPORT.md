@@ -244,7 +244,7 @@ The method `setDiveProgress(t, start, target)` animates the goalkeeper through d
 
 1. At `t = 0`, the goalkeeper returns to a ready pose with a forward-leaning torso, slightly lowered head, open arms, and bent hips.
 2. During the crouch phase, the torso and hips bend more strongly and the arms open further.
-3. During the flight phase, the goalkeeper moves horizontally toward the target, follows a vertical jump arc, rotates the whole body around the Z axis, and adjusts shoulder and hip rotations based on whether the dive is left, right, or center.
+3. During the flight phase, the goalkeeper moves horizontally toward the target, follows a vertical jump arc, rotates the whole body around the Z axis, and adjusts shoulder and hip rotations based on whether the dive is left, right, or center. Recently, the limb animation was refined to include forward anatomical reach (`rotation.x`) and corrected lateral rotations (`rotation.z`) for the shoulder joints, fixing previous anatomical breaking during extreme extensions.
 
 This is a true hierarchical animation because the visible pose is produced by a combination of root transform changes and local joint rotations.
 
@@ -421,7 +421,9 @@ The HTML interface is defined in `index.html`. It includes:
 - selected light X/Y/Z sliders,
 - four light enable checkboxes.
 
-`src/ui/UIManager.js` centralizes scoreboard, power bar, result message, and reset hint updates. Light and goalkeeper sliders are read in `src/main.js` and `GameStateMachine`.
+`src/ui/UIManager.js` centralizes scoreboard, power bar, result message, and reset hint updates. Light and goalkeeper sliders are read in `src/main.js` and `GameStateMachine`. The UI was also polished with modern styling, featuring a dark glassmorphism aesthetic that significantly enhances the visual experience.
+
+Furthermore, a critical UI synchronization logic was implemented: when a different light tower is selected via the dropdown, the UI dynamically reads and updates the sliders to match that specific light's canonical base coordinates. This prevents unwanted positional jumps that would occur if the selected light inherited stale slider values.
 
 The interface provides more than three user-controlled objects or parameters: crosshair, goalkeeper, camera, selected light position, light intensity, light movement speed, and individual light enable states.
 
@@ -491,7 +493,7 @@ This matrix is used during both shadow-map rendering and shadow lookup.
 
 ### 5.4 Dynamic Stadium Lighting
 
-`src/main.js` creates four lights:
+`src/main.js` creates four lights with an optimized default spotlight intensity of `1.0` to prevent scene overexposure. The lights are placed at:
 
 - `light1`: `Vec3(-9, 8, -9)`,
 - `light2`: `Vec3(9, 8, -9)`,
