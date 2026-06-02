@@ -196,7 +196,7 @@ The football is implemented in `src/objects/Ball.js`. It uses a high-resolution 
 new Sphere(gl, 0.3, 64, 64)
 ```
 
-The material loads `assets/textures/football.jpg` and enables texture sampling through `useTexture: true`. The ball starts at `new Vec3(0, ballRadius, 0)`, which places the center at `y = 0.3` so the sphere rests on the grass rather than intersecting it. The ball's initial `rotation.x` is set to `Math.PI * 0.75` to align the texture visually.
+The material loads `assets/textures/football.jpg` and enables texture sampling through `useTexture: true`. The ball is mathematically positioned to spawn exactly on top of the procedural penalty spot modeled on the pitch (`new Vec3(0, ballRadius, 0)`), and its Y-axis is perfectly flush with the ground using its exact radius. The ball's initial `rotation.x` is set to `Math.PI * 0.75` to align the texture visually.
 
 During gameplay, the ball's transform position is continuously updated by `BallTrajectory.computePosition`, and its rotation is updated in `GameStateMachine.updateShooting` to show forward spin, side spin, and tumbling.
 
@@ -389,17 +389,18 @@ The final Y position is clamped to at least the ball radius, preventing the ball
 
 ### 4.7 Goalkeeper Dive
 
-The goalkeeper's target is computed in `src/physics/GoalkeeperDive.js`. `computeTarget` estimates the ball destination, includes side spin and a random prediction error, and clamps the maximum horizontal leap:
+The goalkeeper's target is computed in `src/physics/GoalkeeperDive.js`. Rather than perfectly predicting the ball's trajectory, the goalkeeper calculates a completely random dive target within the physical goal bounds the moment the shot is taken:
 
-- maximum lateral leap: `1.85`,
-- goalkeeper reach X range: approximately constrained within `[-2.2, 2.2]`,
-- goalkeeper reach Y range: `[0.5, 2.0]`.
+- X range: `[-3.0, 3.0]`,
+- Y range: `[0.5, 2.5]`.
+
+This makes the gameplay unpredictable and more realistic, forcing the player to guess where the keeper won't go.
 
 The actual pose animation is implemented in the goalkeeper object's `setDiveProgress` method. This method combines translation, jump arc, body rotation, shoulder rotation, hip rotation, and ready-pose restoration. It creates a much richer animation than a simple linear translation.
 
 ### 4.8 Save, Goal, and Miss Logic
 
-`src/physics/Collision.js` defines `ShotResult` values: `GOAL`, `SAVE`, and `MISS`. It checks whether the final ball position is within the goal frame, whether the goalkeeper is close enough to save the shot, and whether the shot should be considered outside.
+`src/physics/Collision.js` defines `ShotResult` values: `GOAL`, `SAVE`, and `MISS`. The logic was refactored so that the logical goal boundaries now perfectly mirror the physical 3D Goalpost dimensions (posts at X = ±3.66, crossbar at Y = 3.0), explicitly accounting for the ball's radius. This ensures that ground shots (where Y equals the ball's radius) and inner-post deflections are accurately registered as GOALs. It also checks whether the goalkeeper is close enough to save the shot.
 
 In `GameStateMachine.updateShooting`, save detection also occurs during the flight phase when `t` is between `0.65` and `0.95`. If the distance between the ball and goalkeeper is less than `1.1`, the goalkeeper may save the shot unless a high-power shot escapes with a probability condition. On save, the ball bounces back into the field with a randomized upward and forward direction.
 
