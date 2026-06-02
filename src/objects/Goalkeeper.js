@@ -272,7 +272,6 @@ export class Goalkeeper extends GameObject {
       }
     }
 
-
     this.transform.position.x = x;
     this.transform.position.y = y;
   }

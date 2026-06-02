@@ -194,7 +194,7 @@ export class GameStateMachine {
             gkObj.transform.position.z
           );
           this.gkTargetPosition = GoalkeeperDive.computeTarget(
-            this.gkStartPosition, this.ballTargetPosition, this.sideSpin
+            this.gkStartPosition, this.ballTargetPosition, this.sideSpin, this.shotPower, this.maxPower
           );
         }
 

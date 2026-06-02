@@ -80,8 +80,13 @@ function main() {
     scene.addLight(light3);
     scene.addLight(light4);
 
-    const shadowMap = new ShadowMap(app.gl, 2048, 2048);
-    const mainLight = light3; // Gölgeler ana ışık (ön-sol kule) üzerinden hesaplanacak
+    // 4 adet kule için 4 ayrı gölge haritası (Performans için çözünürlüğü 1024x1024 yaptık)
+    const shadowMaps = [
+      new ShadowMap(app.gl, 1024, 1024),
+      new ShadowMap(app.gl, 1024, 1024),
+      new ShadowMap(app.gl, 1024, 1024),
+      new ShadowMap(app.gl, 1024, 1024)
+    ];
 
     // --- UI ve Oyun Durum Makinesi ---
     const ui = new UIManager();
@@ -226,25 +231,37 @@ function main() {
       game.update(time.deltaTime, scene, input, camera);
       cameraControls.update(input, time.deltaTime);
 
-      const lightSpaceMatrix = mainLight.getLightSpaceMatrix();
-
-      // 1. Gölge Geçişi (Shadow Pass)
-      shadowMap.bind();
-      shadowShader.use();
-      shadowShader.setMat4("uLightSpaceMatrix", lightSpaceMatrix.elements);
-      scene.renderDepthPass(app.gl, shadowShader);
-      shadowMap.unbind(app.canvas.width, app.canvas.height);
+      // 1. Gölge Geçişi (Shadow Pass) - Her ışık kaynağı için ayrı derinlik çizimi yapıyoruz
+      for (let i = 0; i < 4; i++) {
+        const currentLight = lightsList[i];
+        const currentShadowMap = shadowMaps[i];
+        
+        if (currentLight && currentLight.enabled) {
+          currentShadowMap.bind();
+          shadowShader.use();
+          shadowShader.setMat4("uLightSpaceMatrix", currentLight.getLightSpaceMatrix().elements);
+          scene.renderDepthPass(app.gl, shadowShader);
+          currentShadowMap.unbind(app.canvas.width, app.canvas.height);
+        }
+      }
 
       // 2. Ana Çizim Geçişi (Color Pass)
       app.clear();
       shader.use();
-      shader.setBool("uShadowEnabled", light3.enabled); // Ana ışık kapalıysa gölgeleri kapat
-      shader.setMat4("uLightSpaceMatrix", lightSpaceMatrix.elements);
 
-      // Gölge haritasını aktif et
-      app.gl.activeTexture(app.gl.TEXTURE1);
-      app.gl.bindTexture(app.gl.TEXTURE_2D, shadowMap.getDepthTexture());
-      shader.setInt("uShadowMap", 1);
+      // Doku ünitelerine gölge haritalarını bağla ve uniform'ları yükle
+      for (let i = 0; i < 4; i++) {
+        const currentLight = lightsList[i];
+        const currentShadowMap = shadowMaps[i];
+        
+        // TEXTURE1, TEXTURE2, TEXTURE3, TEXTURE4 ünitelerini kullanıyoruz
+        app.gl.activeTexture(app.gl.TEXTURE1 + i);
+        app.gl.bindTexture(app.gl.TEXTURE_2D, currentShadowMap.getDepthTexture());
+        
+        shader.setInt(`uShadowMap${i}`, 1 + i);
+        shader.setMat4(`uLightSpaceMatrix${i}`, currentLight.getLightSpaceMatrix().elements);
+        shader.setBool(`uShadowEnabled${i}`, currentLight.enabled);
+      }
 
       scene.update(time.deltaTime);
       scene.render(app.gl, shader);
