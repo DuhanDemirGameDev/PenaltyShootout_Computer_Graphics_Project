@@ -340,7 +340,14 @@ export class GameStateMachine {
   // ------------------------------------------
   updateFinished(input, ballObject, crosshair) {
     if (input.wasKeyPressed("Space")) {
-      if (ballObject) ballObject.transform.position = new Vec3(0, 0.5, 3);
+      if (ballObject) {
+        // Bug 2 FIX: Y = ballRadius (0.3) — top tam zemine oturur, havada kalmaz
+        // Bug 3 FIX: X=0, Z=0 — Ground.js'deki penaltySpot.transform.position = Vec3(0, lineY, 0) ile birebir eşleşir
+        ballObject.transform.position = new Vec3(0, 0.3, 0);
+        // Önceki şuttan kalan dönüşü sıfırla
+        ballObject.transform.rotation  = new Vec3(Math.PI * 0.75, 0, 0);
+      }
+
       crosshair.transform.position = new Vec3(0, 1.5, -6.5);
 
       this.hasSavedBall = false;

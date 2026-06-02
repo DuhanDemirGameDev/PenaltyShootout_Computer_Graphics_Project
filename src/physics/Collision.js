@@ -60,8 +60,8 @@ export class Collision {
 
     const inGoalX = ballPos.x > -(goalHalfWidth - postRadius - ballRadius)
                  && ballPos.x < (goalHalfWidth - postRadius - ballRadius);
-    const inGoalY = ballPos.y > ballRadius
-                 && ballPos.y < (crossbarHeight - postRadius - ballRadius);
+    const inGoalY = ballPos.y >= ballRadius              // Bug 1 FIX: >= yerine > kullanıldı — zemine sıfırlanan toplar da gol sayılır
+                 && ballPos.y <  (crossbarHeight - postRadius - ballRadius);
 
     if (ballPos.z <= -6.4 && inGoalX && inGoalY) {
       return ShotResult.GOAL;
