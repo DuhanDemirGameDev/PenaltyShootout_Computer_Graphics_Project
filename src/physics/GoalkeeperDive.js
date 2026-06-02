@@ -16,19 +16,15 @@ export class GoalkeeperDive {
    * @returns {Vec3} Kalecinin dalış hedef pozisyonu
    */
   static computeTarget(gkStartPos, ballTargetPos, sideSpin) {
-    const predictionError = (Math.random() - 0.5) * 0.8;
-    const finalTargetX = ballTargetPos.x + sideSpin + predictionError;
+    // FIX (Issue 1): Kaleci topu tahmin ETMEZ — kale sınırları içinde tamamen rastgele
+    // bir konuma dalış yapar. Bu, gerçekçi bir "tahmin" davranışı simüle eder.
+    // X: Kale genişliği içinde rastgele bir nokta (-3.0 ile 3.0 arası)
+    const randomX = -3.0 + Math.random() * 6.0;
 
-    // Gerçekçi sıçrama menzili sınırlaması: Kaleci durduğu yerden en fazla 1.85 metre yana zıplayabilir.
-    const maxLeap = 1.85;
-    const minX = gkStartPos.x - maxLeap;
-    const maxX = gkStartPos.x + maxLeap;
+    // Y: Kale yüksekliği içinde rastgele bir nokta (0.5 ile 2.5 arası)
+    const randomY = 0.5 + Math.random() * 2.0;
 
-    // Kalecinin uzanabileceği nihai hedef koordinatı sınırı
-    const gkMaxReachX = Math.max(minX, Math.max(-2.2, Math.min(2.2, Math.min(maxX, finalTargetX))));
-    const gkMaxReachY = Math.max(0.5, Math.min(2.0, ballTargetPos.y * 0.78));
-
-    return new Vec3(gkMaxReachX, gkMaxReachY, gkStartPos.z);
+    return new Vec3(randomX, randomY, gkStartPos.z);
   }
 
   /**

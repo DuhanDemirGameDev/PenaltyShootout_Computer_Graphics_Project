@@ -69,10 +69,11 @@ function main() {
 
     // --- Işıklar ve Gölge ---
     const lightTarget = new Vec3(0, 0, -3);
-    const light1 = new Spotlight({ position: new Vec3(-9, 8, -9), target: lightTarget });
-    const light2 = new Spotlight({ position: new Vec3(9, 8, -9), target: lightTarget });
-    const light3 = new Spotlight({ position: new Vec3(-9, 8, 7), target: lightTarget });
-    const light4 = new Spotlight({ position: new Vec3(9, 8, 7), target: lightTarget });
+    // Task 2: Spotlight intensity başlangıç değeri 1.0 olarak ayarlandı
+    const light1 = new Spotlight({ position: new Vec3(-9, 8, -9), target: lightTarget, intensity: 1.0 });
+    const light2 = new Spotlight({ position: new Vec3( 9, 8, -9), target: lightTarget, intensity: 1.0 });
+    const light3 = new Spotlight({ position: new Vec3(-9, 8,  7), target: lightTarget, intensity: 1.0 });
+    const light4 = new Spotlight({ position: new Vec3( 9, 8,  7), target: lightTarget, intensity: 1.0 });
 
     scene.addLight(light1);
     scene.addLight(light2);
@@ -87,23 +88,52 @@ function main() {
     const game = new GameStateMachine(ui);
     game.init(app.gl, { TargetCrosshair });
 
-    // Seçili ışık kulesi değiştikçe slider'ları güncelle
-    const lightSelector = document.getElementById("selectedLightIndex");
-    const posXSliderInit = document.getElementById("lightPosX");
-    const posYSliderInit = document.getElementById("lightPosY");
-    const posZSliderInit = document.getElementById("lightPosZ");
     const lightsList = [light1, light2, light3, light4];
+
+    // Task 1 FIX: Her ışık için kanonikal (animasyon öncesi) baz pozisyonları saklıyoruz.
+    // Dropdown değiştiğinde slider'ları bu baz pozisyonlarına göre güncelliyoruz,
+    // böylece animasyon döngüsü yeni ışığın baz pozisyonunu referans alır ve ışık teleport etmez.
+    const lightBasePositions = lightsList.map(l => ({
+      x: l.position.x,
+      y: l.position.y,
+      z: l.position.z,
+    }));
+
+    const lightSelector   = document.getElementById("selectedLightIndex");
+    const posXSliderInit  = document.getElementById("lightPosX");
+    const posYSliderInit  = document.getElementById("lightPosY");
+    const posZSliderInit  = document.getElementById("lightPosZ");
+
+    // Slider'lardaki mevcut baz pozisyonunu sakla (kullanıcının değiştirdiğinde güncellenir)
+    // Başlangıçta seçili ışık (index 2 = light3) baz pozisyonu slider'lara yüklenir.
+    if (posXSliderInit) posXSliderInit.value = lightBasePositions[2].x;
+    if (posYSliderInit) posYSliderInit.value = lightBasePositions[2].y;
+    if (posZSliderInit) posZSliderInit.value = lightBasePositions[2].z;
 
     if (lightSelector && posXSliderInit && posYSliderInit && posZSliderInit) {
       lightSelector.addEventListener("change", () => {
         const idx = parseInt(lightSelector.value);
-        const selLight = lightsList[idx];
-        if (selLight) {
-          posXSliderInit.value = selLight.position.x;
-          posYSliderInit.value = selLight.position.y;
-          posZSliderInit.value = selLight.position.z;
+        // Task 1 FIX: Slider'ları animasyonlu (anlık) pozisyondan DEĞİL,
+        // o ışığın kanonikal baz pozisyonundan oku. Böylece loop bir sonraki frame'de
+        // doğru baz üzerinde animasyon uygular ve ışık zıplamaz.
+        const base = lightBasePositions[idx];
+        if (base) {
+          posXSliderInit.value = base.x;
+          posYSliderInit.value = base.y;
+          posZSliderInit.value = base.z;
         }
       });
+
+      // Kullanıcı slider'ı elle değiştirdiğinde kanonikal baz pozisyonunu da güncelle
+      const updateBase = () => {
+        const idx = parseInt(lightSelector.value);
+        lightBasePositions[idx].x = parseFloat(posXSliderInit.value);
+        lightBasePositions[idx].y = parseFloat(posYSliderInit.value);
+        lightBasePositions[idx].z = parseFloat(posZSliderInit.value);
+      };
+      posXSliderInit.addEventListener("input", updateBase);
+      posYSliderInit.addEventListener("input", updateBase);
+      posZSliderInit.addEventListener("input", updateBase);
     }
 
     // --- Kamera Kontrolleri ---
@@ -139,9 +169,6 @@ function main() {
         moveSpeed = parseFloat(movementSlider.value);
       }
 
-      const posXSlider = document.getElementById("lightPosX");
-      const posYSlider = document.getElementById("lightPosY");
-      const posZSlider = document.getElementById("lightPosZ");
 
       const selectedIndex = lightSelector ? parseInt(lightSelector.value) : 2;
       const selectedLight = lightsList[selectedIndex];
@@ -153,10 +180,12 @@ function main() {
         light1.target = new Vec3(Math.cos(timeSec) * 3.5, 0, -3 + Math.sin(timeSec) * 1.5);
         light2.target = new Vec3(Math.sin(timeSec * 1.25) * 3.5, 0, -3 + Math.cos(timeSec * 0.75) * 1.5);
         
-        // Seçilen ışık kaynağı manuel konum etrafında daire çizer, diğerleri otomatik hedef takibi yapar
-        const basePosX = posXSlider ? parseFloat(posXSlider.value) : (selectedLight ? selectedLight.position.x : -9);
-        const basePosY = posYSlider ? parseFloat(posYSlider.value) : (selectedLight ? selectedLight.position.y : 8);
-        const basePosZ = posZSlider ? parseFloat(posZSlider.value) : (selectedLight ? selectedLight.position.z : 7);
+        // Task 1 FIX: Orbit bazını slider'dan değil lightBasePositions'dan oku —
+        // bu sayede dropdown değişiminde ışık anlık pozisyona (mid-orbit) zıplamaz.
+        const base = lightBasePositions[selectedIndex];
+        const basePosX = base ? base.x : (selectedLight ? selectedLight.position.x : -9);
+        const basePosY = base ? base.y : (selectedLight ? selectedLight.position.y :  8);
+        const basePosZ = base ? base.z : (selectedLight ? selectedLight.position.z :  7);
         
         if (selectedLight) {
           selectedLight.position = new Vec3(
@@ -176,12 +205,9 @@ function main() {
         light4.target = defaultTarget;
         
         // Hareket yokken tamamen manuel kontrol: Seçili ışık kaynağı kullanıcının belirlediği X, Y, Z konumuna gider
-        if (selectedLight && posXSlider && posYSlider && posZSlider) {
-          selectedLight.position = new Vec3(
-            parseFloat(posXSlider.value),
-            parseFloat(posYSlider.value),
-            parseFloat(posZSlider.value)
-          );
+        const base = lightBasePositions[selectedIndex];
+        if (selectedLight && base) {
+          selectedLight.position = new Vec3(base.x, base.y, base.z);
         }
       }
 

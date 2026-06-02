@@ -210,36 +210,68 @@ export class Goalkeeper extends GameObject {
       const diveAngle = direction * 0.45; // Dalış yatış açısı derecesi
       this.transform.rotation = new Vec3(0, 0, -diveAngle * lp);
 
-      // Gövdeyi dalış yönüne göre hafifçe döndür
-      this.joints.torso.transform.rotation = new Vec3(0, direction * 0.15 * lp, 0);
+      // FIX (Issue 3): Gövde dalış yönünde hafif döner; Y ekseninde 0.15 * lp ile sınırlı
+      this.joints.torso.transform.rotation = new Vec3(0.1 * lp, direction * 0.12 * lp, 0);
       this.joints.head.transform.rotation = new Vec3(0, 0, 0);
 
-      // Eklemlerin dalış yönüne göre gerilmesi (Gerçekçi uçuş pozu)
+      // FIX (Issue 3): Eklemlerin dalış yönüne göre gerilmesi (Anatomik uçuş pozu)
+      // Omuz ekseninde:
+      //   - Z dönüşü: Kolun vücuttan yanlara açılması (adduction/abduction)
+      //   - X dönüşü: Kolun öne/arkaya uzanması (flexion/extension) - dalış uzanması için ÖNEMLİ
       if (direction < -0.2) {
-        // SOLA DALIŞ (Kollar sola doğru uzanır)
-        this.joints.leftShoulder.transform.rotation = new Vec3(-0.1 * lp, 0, (Math.PI * 0.65) * lp);
-        this.joints.rightShoulder.transform.rotation = new Vec3(0, 0, -(Math.PI * 0.8) * lp);
-        
-        // Bacakların havada gerilmesi (Sol bacak bükülür, sağ bacak gerilir)
-        this.joints.leftHip.transform.rotation = new Vec3(-0.1 * lp, 0, -0.35 * lp);
-        this.joints.rightHip.transform.rotation = new Vec3(-0.3 * lp, 0, -0.5 * lp);
+        // SOLA DALIŞ — Sol kollar ileri ve yukarı uzanır, sağ kol denge için hafifçe açılır
+        // Sol omuz: vücuttan yukarı ve sola kaldır (Z), dalış yönünde hafif öne (X)
+        this.joints.leftShoulder.transform.rotation = new Vec3(
+          -Math.PI * 0.20 * lp,          // X: dalış yönünde hafif öne eğim
+           0,
+           Math.PI * 0.55 * lp            // Z: sol kolu yukarı ve sola kaldır
+        );
+        // Sağ omuz: denge için karşı tarafta orta açı, doğal poz
+        this.joints.rightShoulder.transform.rotation = new Vec3(
+           Math.PI * 0.10 * lp,           // X: hafif geriye (denge)
+           0,
+          -Math.PI * 0.30 * lp            // Z: sağ kolu vücuttan hafifçe aç
+        );
+
+        // Bacak pozu: Sol bacak (yere yakın) hafif bükülerek destek sağlar, sağ bacak uzanır
+        this.joints.leftHip.transform.rotation  = new Vec3(-0.15 * lp, 0, -0.25 * lp);
+        this.joints.rightHip.transform.rotation = new Vec3(-0.35 * lp, 0, -0.40 * lp);
+
       } else if (direction > 0.2) {
-        // SAĞA DALIŞ (Kollar sağa doğru uzanır)
-        this.joints.rightShoulder.transform.rotation = new Vec3(-0.1 * lp, 0, -(Math.PI * 0.65) * lp);
-        this.joints.leftShoulder.transform.rotation = new Vec3(0, 0, (Math.PI * 0.8) * lp);
-        
-        // Bacakların havada gerilmesi (Sağ bacak bükülür, sol bacak gerilir)
-        this.joints.rightHip.transform.rotation = new Vec3(-0.1 * lp, 0, 0.35 * lp);
-        this.joints.leftHip.transform.rotation = new Vec3(-0.3 * lp, 0, 0.5 * lp);
+        // SAĞA DALIŞ — Sağ kol ileri ve yukarı uzanır, sol kol denge için hafifçe açılır
+        this.joints.rightShoulder.transform.rotation = new Vec3(
+          -Math.PI * 0.20 * lp,           // X: dalış yönünde hafif öne eğim
+           0,
+          -Math.PI * 0.55 * lp            // Z: sağ kolu yukarı ve sağa kaldır
+        );
+        this.joints.leftShoulder.transform.rotation = new Vec3(
+           Math.PI * 0.10 * lp,           // X: hafif geriye (denge)
+           0,
+           Math.PI * 0.30 * lp            // Z: sol kolu vücuttan hafifçe aç
+        );
+
+        // Bacak pozu: Sağ bacak (yere yakın) hafif bükülerek destek sağlar, sol bacak uzanır
+        this.joints.rightHip.transform.rotation = new Vec3(-0.15 * lp, 0,  0.25 * lp);
+        this.joints.leftHip.transform.rotation  = new Vec3(-0.35 * lp, 0,  0.40 * lp);
+
       } else {
-        // ORTAYA / DÜZ ZIPLAMA (İki kol birden havaya kalkar)
-        this.joints.leftShoulder.transform.rotation = new Vec3(0, 0, (Math.PI * 0.65) * lp);
-        this.joints.rightShoulder.transform.rotation = new Vec3(0, 0, -(Math.PI * 0.65) * lp);
-        
-        this.joints.leftHip.transform.rotation = new Vec3(-0.15 * lp, 0, -0.2 * lp);
-        this.joints.rightHip.transform.rotation = new Vec3(-0.15 * lp, 0, 0.2 * lp);
+        // ORTAYA / DÜZ ZIPLAMA — İki kol simetrik olarak yukarı kalkar
+        this.joints.leftShoulder.transform.rotation = new Vec3(
+          -Math.PI * 0.30 * lp,           // X: her iki kol ileri ve yukarı uzanır
+           0,
+           Math.PI * 0.50 * lp            // Z: sol kol sola ayrılır
+        );
+        this.joints.rightShoulder.transform.rotation = new Vec3(
+          -Math.PI * 0.30 * lp,           // X: sağ kol ileri ve yukarı
+           0,
+          -Math.PI * 0.50 * lp            // Z: sağ kol sağa ayrılır
+        );
+
+        this.joints.leftHip.transform.rotation  = new Vec3(-0.20 * lp, 0, -0.15 * lp);
+        this.joints.rightHip.transform.rotation = new Vec3(-0.20 * lp, 0,  0.15 * lp);
       }
     }
+
 
     this.transform.position.x = x;
     this.transform.position.y = y;

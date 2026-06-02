@@ -13,7 +13,7 @@ export class Spotlight extends Light {
     position = new Vec3(0, 10, 0),
     target = new Vec3(0, 0, 0),
     color = new Vec3(1.0, 0.95, 0.85),
-    intensity = 1.5,
+    intensity = 1.0, // FIX (Issue 4): 1.5'ten 1.0'a düşürüldü — 4 ışık kaynağıyla aşırı parlama engellendi
     near = 1.0,
     far = 60.0,
   } = {}) {

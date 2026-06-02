@@ -1,53 +1,479 @@
-* {
+/* ================================================================
+   Penalty Shootout Simulator — Global Styles
+   Premium dark game UI with glassmorphism + micro-animations
+   ================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Orbitron:wght@700;900&display=swap');
+
+/* ── Reset & Base ── */
+*, *::before, *::after {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-html,
-body {
+html, body {
   width: 100%;
   height: 100%;
-  margin: 0;
   overflow: hidden;
-  font-family: Arial, Helvetica, sans-serif;
-  background: #071018;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  background: #060c14;
+  color: #e2e8f0;
 }
 
-body {
-  position: relative;
-}
-
+/* ── WebGL Canvas ── */
 #glCanvas {
   display: block;
   width: 100vw;
   height: 100vh;
 }
 
+/* ================================================================
+   SIDE CONTROL PANEL  — Glassmorphism Game Menu
+   ================================================================ */
 .ui-panel {
   position: fixed;
   top: 16px;
   left: 16px;
-  width: min(280px, calc(100vw - 32px));
-  padding: 14px;
-  color: #f5f7fb;
-  background: rgba(12, 18, 28, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 8px;
-  backdrop-filter: blur(8px);
+  width: min(272px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  padding: 18px 16px 20px;
+  color: #e2e8f0;
+
+  /* Glassmorphism card */
+  background: linear-gradient(
+    145deg,
+    rgba(8, 18, 35, 0.88) 0%,
+    rgba(12, 24, 46, 0.82) 100%
+  );
+  border: 1px solid rgba(99, 179, 237, 0.18);
+  border-radius: 16px;
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.04) inset,
+    0 8px 32px rgba(0, 0, 0, 0.55),
+    0 0 60px rgba(56, 139, 253, 0.06);
+
+  /* Scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99,179,237,0.25) transparent;
+}
+.ui-panel::-webkit-scrollbar { width: 4px; }
+.ui-panel::-webkit-scrollbar-track { background: transparent; }
+.ui-panel::-webkit-scrollbar-thumb {
+  background: rgba(99,179,237,0.3);
+  border-radius: 4px;
 }
 
+/* ── Panel Title ── */
 .ui-panel h1 {
-  margin: 0 0 12px;
-  font-size: 16px;
-  font-weight: 700;
+  font-family: 'Orbitron', 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #fff;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(99, 179, 237, 0.2);
+
+  /* Subtle neon glow */
+  text-shadow: 0 0 16px rgba(99, 179, 237, 0.45);
+
+  /* Accent underline via gradient */
+  background: linear-gradient(90deg, #63b3ed, #4299e1, #805ad5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
+/* ── Section Headings ── */
+.ui-panel h3 {
+  margin: 16px 0 6px;
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(148, 163, 184, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+/* ── Divider ── */
+.panel-divider {
+  border: 0;
+  border-top: 1px solid rgba(99, 179, 237, 0.12);
+  margin: 14px 0 4px;
+}
+
+/* ── Labels ── */
 .ui-panel label {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
   margin-top: 12px;
-  font-size: 13px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #94a3b8;
+  letter-spacing: 0.3px;
+  cursor: default;
 }
 
-.ui-panel input {
+/* ── Label text with live value badge ── */
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.label-val {
+  font-size: 10px;
+  font-weight: 600;
+  color: #63b3ed;
+  background: rgba(99, 179, 237, 0.12);
+  padding: 1px 6px;
+  border-radius: 20px;
+  min-width: 28px;
+  text-align: center;
+  transition: color 0.2s;
+}
+
+/* ================================================================
+   RANGE SLIDERS — Game-style
+   ================================================================ */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
   width: 100%;
+  height: 4px;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  background: rgba(255,255,255,0.08);
+  transition: background 0.2s;
+}
+
+/* Filled track (Chrome/Safari) */
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    #3b82f6 0%,
+    #3b82f6 var(--fill, 50%),
+    rgba(255,255,255,0.08) var(--fill, 50%)
+  );
+}
+/* Firefox track */
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.08);
+}
+input[type="range"]::-moz-range-progress {
+  height: 4px;
+  background: #3b82f6;
+  border-radius: 4px;
+}
+
+/* Thumb — Chrome/Safari */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #3b82f6;
+  box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  margin-top: -5px;
+  transition: box-shadow 0.2s, transform 0.15s, border-color 0.2s;
+}
+input[type="range"]:hover::-webkit-slider-thumb,
+input[type="range"]:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.25);
+  transform: scale(1.15);
+  border-color: #60a5fa;
+}
+
+/* Thumb — Firefox */
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #3b82f6;
+  box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  transition: box-shadow 0.2s, transform 0.15s;
+  cursor: pointer;
+}
+input[type="range"]:hover::-moz-range-thumb {
+  box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.25);
+  transform: scale(1.15);
+}
+
+/* Active drag */
+input[type="range"]:active::-webkit-slider-thumb {
+  box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.18);
+  transform: scale(1.25);
+}
+
+/* ================================================================
+   SELECT DROPDOWN
+   ================================================================ */
+.panel-select {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.9);
+  color: #e2e8f0;
+  border: 1px solid rgba(99, 179, 237, 0.22);
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  margin-top: 4px;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2363b3ed'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+.panel-select:hover {
+  border-color: rgba(99, 179, 237, 0.5);
+  background-color: rgba(20, 32, 58, 0.95);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+.panel-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+.panel-select option {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+/* ================================================================
+   CHECKBOX TOGGLES — Custom pill-style
+   ================================================================ */
+.toggle-label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  user-select: none;
+}
+.toggle-label:hover {
+  background: rgba(99, 179, 237, 0.07);
+  border-color: rgba(99, 179, 237, 0.15);
+  color: #cbd5e1;
+}
+
+/* Hide native checkbox */
+.toggle-label input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Custom toggle pill */
+.toggle-label .toggle-pill {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 18px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.15);
+  transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
+}
+.toggle-label .toggle-pill::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #64748b;
+  transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), background 0.25s;
+}
+.toggle-label input[type="checkbox"]:checked ~ .toggle-pill {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border-color: #2563eb;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+}
+.toggle-label input[type="checkbox"]:checked ~ .toggle-pill::after {
+  transform: translateX(14px);
+  background: #fff;
+}
+
+/* Tower icon badge */
+.tower-icon {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+/* ================================================================
+   SCOREBOARD OVERLAY
+   ================================================================ */
+#scoreboard {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, rgba(6,12,24,0.9), rgba(10,20,40,0.85));
+  padding: 10px 28px;
+  border-radius: 40px;
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  display: flex;
+  gap: 32px;
+  font-weight: bold;
+  color: white;
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 4px 24px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(255,255,255,0.04) inset,
+    0 0 30px rgba(74, 222, 128, 0.08);
+  font-family: 'Orbitron', sans-serif;
+}
+
+.score-divider {
+  width: 1px;
+  background: rgba(255,255,255,0.12);
+  align-self: stretch;
+}
+
+.score-box {
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.5);
+}
+
+#goalScore {
+  color: #4ade80;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.1;
+  text-shadow: 0 0 14px rgba(74, 222, 128, 0.55);
+}
+#saveScore {
+  color: #60a5fa;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.1;
+  text-shadow: 0 0 14px rgba(96, 165, 250, 0.55);
+}
+
+/* ================================================================
+   POWER BAR
+   ================================================================ */
+#powerContainer {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 260px;
+  background: rgba(6, 12, 24, 0.85);
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  display: none;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+#powerLabel {
+  font-size: 9px;
+  text-align: center;
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 5px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-family: 'Orbitron', sans-serif;
+}
+#powerBorder {
+  width: 100%;
+  height: 8px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 8px;
+  overflow: hidden;
+}
+#powerFill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #facc15, #ef4444);
+  border-radius: 8px;
+  transition: width 0.05s linear;
+  box-shadow: 0 0 8px rgba(250, 204, 21, 0.4);
+}
+
+/* ================================================================
+   GAME MESSAGE POP-UP
+   ================================================================ */
+#gameMessage {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.6);
+  font-size: 52px;
+  font-weight: 900;
+  text-shadow:
+    0 4px 20px rgba(0,0,0,0.85),
+    0 0 40px currentColor;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  text-transform: uppercase;
+  font-family: 'Orbitron', sans-serif;
+  letter-spacing: 2px;
+  pointer-events: none;
+}
+#gameMessage.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+.msg-goal { color: #4ade80; }
+.msg-save { color: #60a5fa; }
+.msg-miss { color: #f87171; }
+
+/* ================================================================
+   RESET HINT
+   ================================================================ */
+#resetHint {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(6, 12, 24, 0.8);
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: rgba(226, 232, 240, 0.8);
+  display: none;
+  border: 1px solid rgba(255,255,255,0.1);
+  backdrop-filter: blur(8px);
+  letter-spacing: 0.5px;
+  font-family: 'Inter', sans-serif;
+}
+#resetHint b {
+  color: #facc15;
+  font-weight: 700;
 }

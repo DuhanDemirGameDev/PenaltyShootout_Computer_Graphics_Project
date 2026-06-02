@@ -44,14 +44,30 @@ export class Collision {
     }
 
     // 2. Kale sınırları içinde mi? (gol kontrolü)
-    // Standard FIFA kalesi iç alan ölçüleri: Direkler X: -3.66 ile 3.66 arasındadır. Direk kalınlıklarını düşerek [-3.55, 3.55] yapıyoruz.
-    // Üst direk yüksekliği 3.0m, kalınlığı düşerek [0.15, 2.9] yapıyoruz.
-    const inGoalX = ballPos.x > -3.55 && ballPos.x < 3.55;
-    const inGoalY = ballPos.y > 0.15 && ballPos.y < 2.9;
+    // FIX (Issue 2): Sınırlar GoalPost.js fiziksel boyutlarıyla eşleştirildi.
+    // GoalPost kökü Z = -7.0 konumundadır.
+    // Sol direk merkezi X = -3.66, Sağ direk merkezi X = 3.66 (yarıçap = 0.1)
+    // Üst direk merkezi Y = 3.0 (yarıçap = 0.1)
+    // Top yarıçapı (0.3) hesaba katılarak iç kenarlar kullanılıyor:
+    //   X sınırı: -(3.66 - 0.1 - 0.3) = -3.26 ile +(3.66 - 0.1 - 0.3) = +3.26
+    //   Y sınırı: (0.3) ile (3.0 - 0.1 - 0.3) = 2.6
+    // GoalPost root Z = -7.0, top Z bu noktayı geçtiğinde (< -7.0'e yakın) gol
+    const ballRadius = 0.3;
+    const postRadius = 0.1;
+    const goalLineZ = -7.0;
+    const goalHalfWidth = 3.66;  // GoalPost.js: crossbarWidth / 2 = 7.32 / 2
+    const crossbarHeight = 3.0;  // GoalPost.js: postHeight
+
+    const inGoalX = ballPos.x > -(goalHalfWidth - postRadius - ballRadius)
+                 && ballPos.x < (goalHalfWidth - postRadius - ballRadius);
+    const inGoalY = ballPos.y > ballRadius
+                 && ballPos.y < (crossbarHeight - postRadius - ballRadius);
 
     if (ballPos.z <= -6.4 && inGoalX && inGoalY) {
       return ShotResult.GOAL;
     }
+
+
 
     // 3. Hiçbiri değilse: dışarı
     return ShotResult.MISS;

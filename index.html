@@ -4,9 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Penalty Shootout Simulator</title>
+  <meta name="description" content="A WebGL-powered penalty shootout simulator with real-time stadium lighting and physics.">
   <link rel="stylesheet" href="./style.css">
   <style>
-    /* Orijinal tasarıma ek olarak UI elemanlarını canvas üzerine sabitleyen CSS katmanları */
+    /* ── Game overlay (canvas-positioned HUD) ── */
     #gameWrapper {
       position: relative;
       display: inline-block;
@@ -14,187 +15,210 @@
 
     #uiOverlay {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none; /* Tıklamaların arkadaki WebGL canvas'ına geçmesini sağlar */
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
       box-sizing: border-box;
       padding: 20px;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    /* Skor Tabelası */
-    #scoreboard {
-      position: absolute;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.75);
-      padding: 10px 25px;
-      border-radius: 30px;
-      border: 2px solid #4ade80;
-      display: flex;
-      gap: 30px;
-      font-weight: bold;
-      color: white;
-    }
-    .score-box { text-align: center; font-size: 14px; letter-spacing: 1px; }
-    #goalScore { color: #4ade80; font-size: 24px; }
-    #saveScore { color: #60a5fa; font-size: 24px; }
-
-    /* Güç Barı */
-    #powerContainer {
-      position: absolute;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 250px;
-      background: rgba(0, 0, 0, 0.6);
-      padding: 6px;
-      border-radius: 8px;
-      border: 1px solid #555;
-      display: none; /* Sadece şarj anında JavaScript ile açılacak */
-    }
-    #powerLabel { font-size: 11px; text-align: center; color: #aaa; margin-bottom: 4px; font-weight: bold; }
-    #powerBorder { width: 100%; height: 16px; background: #222; border-radius: 4px; overflow: hidden; }
-    #powerFill { width: 0%; height: 100%; background: linear-gradient(90deg, #4ade80, #facc15, #f87171); }
-
-    /* Gol / Kurtarış Mesajı Pop-up */
-    #gameMessage {
-      position: absolute;
-      top: 45%;
-      left: 50%;
-      transform: translate(-50%, -50%) scale(0.6);
-      font-size: 48px;
-      font-weight: 900;
-      text-shadow: 0 5px 15px rgba(0,0,0,0.8);
-      opacity: 0;
-      transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      text-transform: uppercase;
-    }
-    #gameMessage.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    .msg-goal { color: #4ade80; }
-    .msg-save { color: #60a5fa; }
-    .msg-miss { color: #f87171; }
-
-    /* Reset Bildirimi */
-    #resetHint {
-      position: absolute;
-      bottom: 20px;
-      right: 20px;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 6px 12px;
-      border-radius: 4px;
-      font-size: 12px;
-      color: #eee;
-      display: none;
-    }
-
-    .ui-panel h3 {
-      margin: 14px 0 2px;
-      font-size: 11px;
-      font-weight: 700;
-      color: #94a3b8;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      font-family: 'Inter', 'Segoe UI', sans-serif;
     }
   </style>
 </head>
 <body>
 
+  <!-- ── WebGL Viewport ── -->
   <div id="gameWrapper">
     <canvas id="glCanvas" aria-label="Penalty Shootout Simulator WebGL canvas"></canvas>
 
+    <!-- ── HUD Overlay ── -->
     <div id="uiOverlay">
+
+      <!-- Scoreboard -->
       <div id="scoreboard">
-        <div class="score-box">GOAL<div id="goalScore">0</div></div>
-        <div class="score-box">SAVE<div id="saveScore">0</div></div>
+        <div class="score-box">
+          GOAL
+          <div id="goalScore">0</div>
+        </div>
+        <div class="score-divider"></div>
+        <div class="score-box">
+          SAVE
+          <div id="saveScore">0</div>
+        </div>
       </div>
 
+      <!-- Game result pop-up -->
       <div id="gameMessage">GOAL!</div>
 
+      <!-- Shot power bar -->
       <div id="powerContainer">
-        <div id="powerLabel">SHOT POWER</div>
+        <div id="powerLabel">Shot Power</div>
         <div id="powerBorder">
           <div id="powerFill"></div>
         </div>
       </div>
 
+      <!-- Reset hint -->
       <div id="resetHint">PRESS <b>SPACE</b> FOR NEW SHOT</div>
-    </div>
-  </div>
 
+    </div><!-- /#uiOverlay -->
+  </div><!-- /#gameWrapper -->
+
+
+  <!-- ═══════════════════════════════════════════
+       SIDE CONTROL PANEL
+       ═══════════════════════════════════════════ -->
   <aside id="uiPanel" class="ui-panel" aria-label="Simulation controls">
-    <h1>Penalty Shootout Simulator</h1>
 
+    <h1>⚽ Penalty Shootout</h1>
+
+    <!-- Goalkeeper position -->
     <label for="goalkeeperX">
-      Goalkeeper X
-      <input id="goalkeeperX" type="range" min="-3" max="3" step="0.1" value="0">
+      <div class="label-row">
+        <span>Goalkeeper Position X</span>
+        <span class="label-val" id="gkXVal">0.0</span>
+      </div>
+      <input id="goalkeeperX" type="range" min="-3" max="3" step="0.1" value="0"
+             oninput="document.getElementById('gkXVal').textContent = parseFloat(this.value).toFixed(1)">
     </label>
 
+    <hr class="panel-divider">
+
+    <!-- Lighting controls -->
+    <h3>🔆 Stadium Lighting</h3>
+
+    <!-- Task 2: min=0, max=2, value=1.0 → thumb sits at exact centre -->
     <label for="lightIntensity">
-      Spotlight Intensity
-      <input id="lightIntensity" type="range" min="0" max="15" step="0.2" value="2.5">
+      <div class="label-row">
+        <span>Spotlight Intensity</span>
+        <span class="label-val" id="intensityVal">1.0</span>
+      </div>
+      <input id="lightIntensity" type="range" min="0" max="2" step="0.05" value="1.0"
+             oninput="document.getElementById('intensityVal').textContent = parseFloat(this.value).toFixed(2)">
     </label>
 
     <label for="lightMovementSpeed">
-      Spotlight Movement Speed
-      <input id="lightMovementSpeed" type="range" min="0" max="5" step="0.1" value="1.0">
+      <div class="label-row">
+        <span>Spotlight Sweep Speed</span>
+        <span class="label-val" id="sweepVal">1.0</span>
+      </div>
+      <input id="lightMovementSpeed" type="range" min="0" max="5" step="0.1" value="1.0"
+             oninput="document.getElementById('sweepVal').textContent = parseFloat(this.value).toFixed(1)">
     </label>
 
-    <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.12); margin: 12px 0 4px 0;">
-    <h3>Işık Konum Kontrolü</h3>
+    <hr class="panel-divider">
+    <h3>📍 Light Tower Position</h3>
 
-    <label for="selectedLightIndex" style="margin-bottom: 8px;">
-      Kontrol Edilecek Işık Kulesi
-      <select id="selectedLightIndex" style="width: 100%; background: #2a2a2a; color: white; border: 1px solid #555; padding: 6px; border-radius: 4px; font-size: 13px; margin-top: 4px; cursor: pointer;">
-        <option value="0">Işık Kulesi 1 (Sol-Arka)</option>
-        <option value="1">Işık Kulesi 2 (Sağ-Arka)</option>
-        <option value="2" selected>Işık Kulesi 3 (Sol-Ön / Ana)</option>
-        <option value="3">Işık Kulesi 4 (Sağ-Ön)</option>
+    <label for="selectedLightIndex" style="cursor:pointer;">
+      <span>Select Tower</span>
+      <select id="selectedLightIndex" class="panel-select">
+        <option value="0">🔦 Tower 1 — Left Back</option>
+        <option value="1">🔦 Tower 2 — Right Back</option>
+        <option value="2" selected>🔦 Tower 3 — Left Front (Main)</option>
+        <option value="3">🔦 Tower 4 — Right Front</option>
       </select>
     </label>
 
     <label for="lightPosX">
-      Seçili Işık Konumu X
-      <input id="lightPosX" type="range" min="-15" max="15" step="0.2" value="-9">
+      <div class="label-row">
+        <span>Position X</span>
+        <span class="label-val" id="lightXVal">-9</span>
+      </div>
+      <input id="lightPosX" type="range" min="-15" max="15" step="0.2" value="-9"
+             oninput="document.getElementById('lightXVal').textContent = parseFloat(this.value).toFixed(1)">
     </label>
 
     <label for="lightPosY">
-      Seçili Işık Konumu Y
-      <input id="lightPosY" type="range" min="3" max="22" step="0.2" value="8">
+      <div class="label-row">
+        <span>Position Y (Height)</span>
+        <span class="label-val" id="lightYVal">8</span>
+      </div>
+      <input id="lightPosY" type="range" min="3" max="22" step="0.2" value="8"
+             oninput="document.getElementById('lightYVal').textContent = parseFloat(this.value).toFixed(1)">
     </label>
 
     <label for="lightPosZ">
-      Seçili Işık Konumu Z
-      <input id="lightPosZ" type="range" min="-15" max="15" step="0.2" value="7">
+      <div class="label-row">
+        <span>Position Z (Depth)</span>
+        <span class="label-val" id="lightZVal">7</span>
+      </div>
+      <input id="lightPosZ" type="range" min="-15" max="15" step="0.2" value="7"
+             oninput="document.getElementById('lightZVal').textContent = parseFloat(this.value).toFixed(1)">
     </label>
 
-    <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.12); margin: 12px 0 4px 0;">
-    <h3>Aktif Işık Kuleleri</h3>
-    
-    <label style="display: flex; flex-direction: row; align-items: center; gap: 8px; margin-top: 6px; cursor: pointer; font-size: 13px;">
-      <input id="light1Enabled" type="checkbox" checked style="width: 16px; height: 16px; margin: 0; cursor: pointer;">
-      Işık Kulesi 1 (Sol-Arka)
+    <hr class="panel-divider">
+    <h3>💡 Active Towers</h3>
+
+    <label class="toggle-label" for="light1Enabled">
+      <input id="light1Enabled" type="checkbox" checked>
+      <span class="toggle-pill"></span>
+      <span class="tower-icon">🏟</span>
+      Tower 1 — Left Back
     </label>
 
-    <label style="display: flex; flex-direction: row; align-items: center; gap: 8px; margin-top: 6px; cursor: pointer; font-size: 13px;">
-      <input id="light2Enabled" type="checkbox" checked style="width: 16px; height: 16px; margin: 0; cursor: pointer;">
-      Işık Kulesi 2 (Sağ-Arka)
+    <label class="toggle-label" for="light2Enabled">
+      <input id="light2Enabled" type="checkbox" checked>
+      <span class="toggle-pill"></span>
+      <span class="tower-icon">🏟</span>
+      Tower 2 — Right Back
     </label>
 
-    <label style="display: flex; flex-direction: row; align-items: center; gap: 8px; margin-top: 6px; cursor: pointer; font-size: 13px;">
-      <input id="light3Enabled" type="checkbox" checked style="width: 16px; height: 16px; margin: 0; cursor: pointer;">
-      Işık Kulesi 3 (Sol-Ön / Ana)
+    <label class="toggle-label" for="light3Enabled">
+      <input id="light3Enabled" type="checkbox" checked>
+      <span class="toggle-pill"></span>
+      <span class="tower-icon">🏟</span>
+      Tower 3 — Left Front
     </label>
 
-    <label style="display: flex; flex-direction: row; align-items: center; gap: 8px; margin-top: 6px; cursor: pointer; font-size: 13px;">
-      <input id="light4Enabled" type="checkbox" checked style="width: 16px; height: 16px; margin: 0; cursor: pointer;">
-      Işık Kulesi 4 (Sağ-Ön)
+    <label class="toggle-label" for="light4Enabled">
+      <input id="light4Enabled" type="checkbox" checked>
+      <span class="toggle-pill"></span>
+      <span class="tower-icon">🏟</span>
+      Tower 4 — Right Front
     </label>
-  </aside>
+
+  </aside><!-- /#uiPanel -->
 
   <script type="module" src="./src/main.js"></script>
+
+  <!-- Live-update slider fill tracks via CSS custom property -->
+  <script>
+    // Drive the CSS gradient fill on all range inputs using a --fill custom property
+    function updateFill(input) {
+      const min = parseFloat(input.min) || 0;
+      const max = parseFloat(input.max) || 100;
+      const val = parseFloat(input.value);
+      const pct = ((val - min) / (max - min)) * 100;
+      input.style.setProperty('--fill', pct + '%');
+    }
+
+    document.querySelectorAll('input[type="range"]').forEach(el => {
+      updateFill(el);
+      el.addEventListener('input', () => updateFill(el));
+    });
+
+    // Sync dropdown value badge labels on tower selection change
+    const lightSelector = document.getElementById('selectedLightIndex');
+    const xSlider = document.getElementById('lightPosX');
+    const ySlider = document.getElementById('lightPosY');
+    const zSlider = document.getElementById('lightPosZ');
+
+    if (lightSelector) {
+      lightSelector.addEventListener('change', () => {
+        // Value badges update automatically when main.js sets .value + fires 'input'
+        // Manually trigger fill updates after main.js sets slider values
+        setTimeout(() => {
+          [xSlider, ySlider, zSlider].forEach(s => {
+            if (s) {
+              updateFill(s);
+              // Also refresh the badge text
+              const badgeId = { lightPosX:'lightXVal', lightPosY:'lightYVal', lightPosZ:'lightZVal' }[s.id];
+              const badge = badgeId && document.getElementById(badgeId);
+              if (badge) badge.textContent = parseFloat(s.value).toFixed(1);
+            }
+          });
+        }, 0);
+      });
+    }
+  </script>
 </body>
 </html>
