@@ -1,9 +1,6 @@
-// ============================================================
-// Shader Kaynak Kodları
-// Phong Aydınlatma + Gölge Haritalama (Shadow Mapping) destekli.
-// ============================================================
-
-// ---------- ANA SHADER (Phong + Shadow) ----------
+/**
+ * GLSL shader sources for textured Phong lighting and multi-light shadow mapping.
+ */
 
 export const basicVertexShader = `#version 300 es
 precision highp float;
@@ -56,12 +53,12 @@ in vec4 vShadowCoord3;
 
 out vec4 fragColor;
 
-// Materyal
+// Material uniforms.
 uniform vec3 uColor;
 uniform sampler2D uTexture;
 uniform bool uUseTexture;
 
-// Aydınlatma
+// Lighting uniforms.
 #define MAX_LIGHTS 4
 uniform vec3 uLightPos[MAX_LIGHTS];
 uniform vec3 uLightColor[MAX_LIGHTS];
@@ -69,7 +66,7 @@ uniform float uLightIntensity;
 uniform int uNumLights;
 uniform vec3 uCameraPos;
 
-// Çoklu Gölgeler
+// Shadow-map uniforms.
 uniform sampler2D uShadowMap0;
 uniform sampler2D uShadowMap1;
 uniform sampler2D uShadowMap2;
@@ -88,10 +85,10 @@ float calcShadow(sampler2D shadowMap, vec4 sc) {
       proj.z > 1.0) return 0.0;
 
   float current = proj.z;
-  float bias = 0.0015; // PCF için uygun bias değeri
+  float bias = 0.0015;
   float shadow = 0.0;
 
-  // 3x3 PCF Filtreleme
+  // 3x3 percentage-closer filtering.
   vec2 texelSize = 1.0 / vec2(textureSize(shadowMap, 0));
   for (int x = -1; x <= 1; ++x) {
     for (int y = -1; y <= 1; ++y) {
@@ -103,11 +100,11 @@ float calcShadow(sampler2D shadowMap, vec4 sc) {
   }
   shadow /= 9.0;
 
-  return shadow * 0.85; // Gölge şiddetini 0.85 yaparak daha belirgin ve gerçekçi gölgeler oluşturuyoruz
+  return shadow * 0.85;
 }
 
 void main() {
-  // Temel renk
+  // Base material color.
   vec3 baseColor;
   if (uUseTexture) {
     baseColor = texture(uTexture, vUv).rgb;
@@ -118,14 +115,14 @@ void main() {
   vec3 N = normalize(vNormal);
   vec3 V = normalize(uCameraPos - vWorldPos);
 
-  // Ambient
+  // Ambient contribution.
   vec3 ambient = 0.08 * baseColor;
 
-  // Diffuse + Specular (tüm ışıklardan ayrı ayrı gölge etkisiyle toplanır)
+  // Diffuse and specular contributions are accumulated per light.
   vec3 diffuseSum = vec3(0.0);
   vec3 specularSum = vec3(0.0);
 
-  // Işık 0
+  // Light 0.
   if (uNumLights > 0) {
     float shadow = uShadowEnabled0 ? calcShadow(uShadowMap0, vShadowCoord0) : 0.0;
     vec3 L = normalize(uLightPos[0] - vWorldPos);
@@ -139,7 +136,7 @@ void main() {
     specularSum += (1.0 - shadow) * spec * uLightColor[0] * uLightIntensity * 0.25 * atten;
   }
 
-  // Işık 1
+  // Light 1.
   if (uNumLights > 1) {
     float shadow = uShadowEnabled1 ? calcShadow(uShadowMap1, vShadowCoord1) : 0.0;
     vec3 L = normalize(uLightPos[1] - vWorldPos);
@@ -153,7 +150,7 @@ void main() {
     specularSum += (1.0 - shadow) * spec * uLightColor[1] * uLightIntensity * 0.25 * atten;
   }
 
-  // Işık 2
+  // Light 2.
   if (uNumLights > 2) {
     float shadow = uShadowEnabled2 ? calcShadow(uShadowMap2, vShadowCoord2) : 0.0;
     vec3 L = normalize(uLightPos[2] - vWorldPos);
@@ -167,7 +164,7 @@ void main() {
     specularSum += (1.0 - shadow) * spec * uLightColor[2] * uLightIntensity * 0.25 * atten;
   }
 
-  // Işık 3
+  // Light 3.
   if (uNumLights > 3) {
     float shadow = uShadowEnabled3 ? calcShadow(uShadowMap3, vShadowCoord3) : 0.0;
     vec3 L = normalize(uLightPos[3] - vWorldPos);
@@ -188,8 +185,6 @@ void main() {
 }
 `;
 
-// ---------- GÖLGE DERİNLİK SHADER'I ----------
-
 export const shadowVertexShader = `#version 300 es
 precision highp float;
 
@@ -207,7 +202,6 @@ export const shadowFragmentShader = `#version 300 es
 precision highp float;
 
 void main() {
-  // Derinlik otomatik olarak depth buffer'a yazılır.
-  // WebGL2 çıktı gerektirmez ama uyumluluk için boş bırakıyoruz.
+  // Depth is written automatically by the fixed-function depth pipeline.
 }
 `;

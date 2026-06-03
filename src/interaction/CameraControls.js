@@ -1,26 +1,21 @@
 import { Vec3 } from "../math/Vec3.js";
 
-// ============================================================
-// Orbit Kamera Kontrolleri
-// Sağ tıklayıp sürükleyerek kamerayı stadyum etrafında döndürür.
-// Scroll ile yakınlaşma/uzaklaşma (zoom) sağlar.
-// Pitch ve distance sınırlandırması (clamp) uygulanır.
-// ============================================================
-
+/**
+ * Orbit camera controller with right-drag rotation, wheel zoom, and WASD panning.
+ */
 export class CameraControls {
   constructor(camera, canvas) {
     this.camera = camera;
     this.canvas = canvas;
 
-    // Orbit merkezi
     this.target = new Vec3(0, 1, -2);
 
-    // Küresel koordinatlar
+    // Spherical coordinates around the orbit target.
     this.yaw = 0;
     this.pitch = 0.32;
     this.distance = 32;
 
-    // Sınırlar
+    // Clamp limits prevent invalid or disorienting camera positions.
     this.minPitch = 0.05;
     this.maxPitch = Math.PI / 2 - 0.05;
     this.minDistance = 8;
@@ -80,11 +75,11 @@ export class CameraControls {
 
   update(input, deltaTime = 0.016) {
     if (input) {
-      const speed = 18.0; // Kamera kaydırma hızı
+      const speed = 18.0;
       const forward = this.camera.front;
       const right = forward.cross(this.camera.up).normalize();
 
-      // Standart oyunlardaki gibi yatay (XZ) düzlemde hareket etmek için vektörleri projekte ediyoruz
+      // Project movement onto the XZ plane so navigation remains field-oriented.
       let forwardXZ = new Vec3(forward.x, 0, forward.z);
       if (forwardXZ.length() > 0.001) {
         forwardXZ = forwardXZ.normalize();

@@ -1,8 +1,10 @@
-// ============================================================
-// Ana Giriş Noktası (Entry Point)
-// WebGL uygulamasını başlatır, sahneyi kurar ve animasyon döngüsünü çalıştırır.
-// Tüm iş mantığı ilgili modüllere delege edilmiştir.
-// ============================================================
+/**
+ * Application entry point.
+ *
+ * Initializes the WebGL pipeline, builds the scene, wires UI controls, and
+ * drives the real-time simulation loop. Gameplay, rendering, input, lighting,
+ * and physics remain delegated to their respective modules.
+ */
 
 import { WebGLApp } from "./core/WebGLApp.js";
 import { Camera } from "./core/Camera.js";
@@ -13,10 +15,8 @@ import { InputManager } from "./interaction/InputManager.js";
 import { Vec3 } from "./math/Vec3.js";
 import { AdBoards } from "./objects/AdBoards.js";
 
-// Shader kaynakları
 import { basicVertexShader, basicFragmentShader, shadowVertexShader, shadowFragmentShader } from "./shaders/ShaderSources.js";
 
-// Sahne objeleri
 import { Ground } from "./objects/Ground.js";
 import { Ball } from "./objects/Ball.js";
 import { GoalPost } from "./objects/GoalPost.js";
@@ -24,18 +24,16 @@ import { StadiumLights } from "./objects/StadiumLights.js";
 import { Goalkeeper } from "./objects/Goalkeeper.js";
 import { TargetCrosshair } from "./objects/TargetCrosshair.js";
 
-// Oyun sistemleri
 import { GameStateMachine } from "./interaction/GameStateMachine.js";
 import { UIManager } from "./ui/UIManager.js";
 import { CameraControls } from "./interaction/CameraControls.js";
 
-// Işık ve Gölge
 import { Spotlight } from "./lighting/Spotlight.js";
 import { ShadowMap } from "./lighting/ShadowMap.js";
 
 function main() {
   try {
-    // --- Motor Başlatma ---
+    // Initialize the low-level WebGL systems before constructing scene objects.
     const app = new WebGLApp("glCanvas");
     const shader = new ShaderProgram(app.gl, basicVertexShader, basicFragmentShader);
     const shadowShader = new ShaderProgram(app.gl, shadowVertexShader, shadowFragmentShader);
@@ -59,7 +57,7 @@ function main() {
     shader.setMat4("uViewMatrix", camera.getViewMatrix().elements);
     shader.setMat4("uProjectionMatrix", camera.getProjectionMatrix().elements);
 
-    // --- Sahne Objeleri ---
+    // Build the static and animated scene objects.
     scene.add(new Ground(app.gl));
     scene.add(new Ball(app.gl));
     scene.add(new GoalPost(app.gl));
@@ -67,9 +65,9 @@ function main() {
     scene.add(new Goalkeeper(app.gl));
     scene.add(new AdBoards(app.gl));
 
-    // --- Işıklar ve Gölge ---
+    // Create four stadium spotlights and their matching shadow resources.
     const lightTarget = new Vec3(0, 0, -3);
-    // Spotlight intensity başlangıç değeri 0.5 olarak ayarlandı (aşırı parlamayı önler, gölgeleri belirginleştirir)
+    // A conservative default intensity prevents overexposure when all lights overlap.
     const light1 = new Spotlight({ position: new Vec3(-9, 8, -9), target: lightTarget, intensity: 0.5 });
     const light2 = new Spotlight({ position: new Vec3( 9, 8, -9), target: lightTarget, intensity: 0.5 });
     const light3 = new Spotlight({ position: new Vec3(-9, 8,  7), target: lightTarget, intensity: 0.5 });
@@ -80,7 +78,7 @@ function main() {
     scene.addLight(light3);
     scene.addLight(light4);
 
-    // 4 adet kule için 4 ayrı gölge haritası (Performans için çözünürlüğü 1024x1024 yaptık)
+    // Each light owns a dedicated depth map so shadows stay synchronized per tower.
     const shadowMaps = [
       new ShadowMap(app.gl, 1024, 1024),
       new ShadowMap(app.gl, 1024, 1024),
@@ -88,16 +86,16 @@ function main() {
       new ShadowMap(app.gl, 1024, 1024)
     ];
 
-    // --- UI ve Oyun Durum Makinesi ---
+    // Initialize the HUD and the gameplay state machine.
     const ui = new UIManager();
     const game = new GameStateMachine(ui);
     game.init(app.gl, { TargetCrosshair });
 
     const lightsList = [light1, light2, light3, light4];
 
-    // Task 1 FIX: Her ışık için kanonikal (animasyon öncesi) baz pozisyonları saklıyoruz.
-    // Dropdown değiştiğinde slider'ları bu baz pozisyonlarına göre güncelliyoruz,
-    // böylece animasyon döngüsü yeni ışığın baz pozisyonunu referans alır ve ışık teleport etmez.
+    // Store canonical light positions separately from animated positions.
+    // This prevents a selected tower from inheriting another tower's mid-orbit
+    // coordinates when the UI dropdown changes.
     const lightBasePositions = lightsList.map(l => ({
       x: l.position.x,
       y: l.position.y,
@@ -109,8 +107,7 @@ function main() {
     const posYSliderInit  = document.getElementById("lightPosY");
     const posZSliderInit  = document.getElementById("lightPosZ");
 
-    // Slider'lardaki mevcut baz pozisyonunu sakla (kullanıcının değiştirdiğinde güncellenir)
-    // Başlangıçta seçili ışık (index 2 = light3) baz pozisyonu slider'lara yüklenir.
+    // Seed the position sliders with the default main light, which is index 2.
     if (posXSliderInit) posXSliderInit.value = lightBasePositions[2].x;
     if (posYSliderInit) posYSliderInit.value = lightBasePositions[2].y;
     if (posZSliderInit) posZSliderInit.value = lightBasePositions[2].z;
@@ -118,9 +115,7 @@ function main() {
     if (lightSelector && posXSliderInit && posYSliderInit && posZSliderInit) {
       lightSelector.addEventListener("change", () => {
         const idx = parseInt(lightSelector.value);
-        // Task 1 FIX: Slider'ları animasyonlu (anlık) pozisyondan DEĞİL,
-        // o ışığın kanonikal baz pozisyonundan oku. Böylece loop bir sonraki frame'de
-        // doğru baz üzerinde animasyon uygular ve ışık zıplamaz.
+        // Read the canonical base position, not the current animated position.
         const base = lightBasePositions[idx];
         if (base) {
           posXSliderInit.value = base.x;
@@ -129,7 +124,7 @@ function main() {
         }
       });
 
-      // Kullanıcı slider'ı elle değiştirdiğinde kanonikal baz pozisyonunu da güncelle
+      // Manual slider edits update the canonical base for the selected tower.
       const updateBase = () => {
         const idx = parseInt(lightSelector.value);
         lightBasePositions[idx].x = parseFloat(posXSliderInit.value);
@@ -141,22 +136,21 @@ function main() {
       posZSliderInit.addEventListener("input", updateBase);
     }
 
-    // --- Kamera Kontrolleri ---
     const cameraControls = new CameraControls(camera, app.canvas);
 
-    // --- Animasyon Döngüsü ---
+    // Main frame loop: update input-driven state, render shadow maps, then render color.
     const animate = (timestamp) => {
       time.update(timestamp);
       camera.updateAspectRatio(app.canvas.width, app.canvas.height);
 
-      // Slider değerlerini güncelle
+      // Synchronize global light intensity from the UI.
       const intensitySlider = document.getElementById("lightIntensity");
       if (intensitySlider) {
         const val = parseFloat(intensitySlider.value);
         scene.lights.forEach(l => l.intensity = val);
       }
 
-      // Işık kulelerinin aktiflik durumunu güncelle (Açma/Kapama)
+      // Synchronize individual light enable states from the UI.
       const check1 = document.getElementById("light1Enabled");
       const check2 = document.getElementById("light2Enabled");
       const check3 = document.getElementById("light3Enabled");
@@ -167,7 +161,7 @@ function main() {
       light3.enabled = check3 ? check3.checked : true;
       light4.enabled = check4 ? check4.checked : true;
 
-      // Dinamik Spotlight Hareketi ve Manuel Konumlandırma
+      // Apply automatic spotlight sweeping or exact manual placement.
       const movementSlider = document.getElementById("lightMovementSpeed");
       let moveSpeed = 1.0;
       if (movementSlider) {
@@ -181,12 +175,11 @@ function main() {
       if (moveSpeed > 0) {
         const timeSec = time.elapsedTime * 0.001 * moveSpeed;
         
-        // Spotlight hedeflerini arama ışıkları gibi gezdiriyoruz
+        // Animate light targets with smooth periodic sweeps across the pitch.
         light1.target = new Vec3(Math.cos(timeSec) * 3.5, 0, -3 + Math.sin(timeSec) * 1.5);
         light2.target = new Vec3(Math.sin(timeSec * 1.25) * 3.5, 0, -3 + Math.cos(timeSec * 0.75) * 1.5);
         
-        // Task 1 FIX: Orbit bazını slider'dan değil lightBasePositions'dan oku —
-        // bu sayede dropdown değişiminde ışık anlık pozisyona (mid-orbit) zıplamaz.
+        // Orbit around the canonical base so UI selection changes remain stable.
         const base = lightBasePositions[selectedIndex];
         const basePosX = base ? base.x : (selectedLight ? selectedLight.position.x : -9);
         const basePosY = base ? base.y : (selectedLight ? selectedLight.position.y :  8);
@@ -209,14 +202,14 @@ function main() {
         light3.target = defaultTarget;
         light4.target = defaultTarget;
         
-        // Hareket yokken tamamen manuel kontrol: Seçili ışık kaynağı kullanıcının belirlediği X, Y, Z konumuna gider
+        // With sweeping disabled, the selected tower follows the UI coordinates exactly.
         const base = lightBasePositions[selectedIndex];
         if (selectedLight && base) {
           selectedLight.position = new Vec3(base.x, base.y, base.z);
         }
       }
 
-      // Tüm fiziksel ışık kulelerinin konumlarını ilgili ışık kaynakları ile senkronize et
+      // Keep visible tower meshes aligned with their logical light positions.
       const stadiumLightsObj = scene.objects.find(obj => obj.name && obj.name.includes("All Stadium Lights"));
       if (stadiumLightsObj) {
         for (let i = 0; i < 4; i++) {
@@ -227,11 +220,10 @@ function main() {
         }
       }
 
-      // Oyun mantığı güncelleme
       game.update(time.deltaTime, scene, input, camera);
       cameraControls.update(input, time.deltaTime);
 
-      // 1. Gölge Geçişi (Shadow Pass) - Her ışık kaynağı için ayrı derinlik çizimi yapıyoruz
+      // Pass 1: render one depth map per enabled spotlight.
       for (let i = 0; i < 4; i++) {
         const currentLight = lightsList[i];
         const currentShadowMap = shadowMaps[i];
@@ -245,16 +237,15 @@ function main() {
         }
       }
 
-      // 2. Ana Çizim Geçişi (Color Pass)
+      // Pass 2: render the lit scene while sampling all shadow maps.
       app.clear();
       shader.use();
 
-      // Doku ünitelerine gölge haritalarını bağla ve uniform'ları yükle
       for (let i = 0; i < 4; i++) {
         const currentLight = lightsList[i];
         const currentShadowMap = shadowMaps[i];
         
-        // TEXTURE1, TEXTURE2, TEXTURE3, TEXTURE4 ünitelerini kullanıyoruz
+        // Texture unit 0 is reserved for object materials; shadow maps start at unit 1.
         app.gl.activeTexture(app.gl.TEXTURE1 + i);
         app.gl.bindTexture(app.gl.TEXTURE_2D, currentShadowMap.getDepthTexture());
         
@@ -272,7 +263,7 @@ function main() {
 
     requestAnimationFrame(animate);
   } catch (error) {
-    console.error("Hata:", error);
+    console.error("Application error:", error);
   }
 }
 

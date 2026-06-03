@@ -4,13 +4,9 @@ import { BallTrajectory } from "../physics/BallTrajectory.js";
 import { GoalkeeperDive } from "../physics/GoalkeeperDive.js";
 import { Collision, ShotResult } from "../physics/Collision.js";
 
-// ============================================================
-// Oyun Durum Makinesi
-// READY → CHARGING → SHOOTING → FINISHED döngüsünü yönetir.
-// Tüm oyun durumu değişkenleri bu sınıfta merkezileştirilmiştir.
-// ============================================================
-
 /**
+ * Gameplay state machine phases.
+ *
  * @readonly
  * @enum {string}
  */
@@ -21,6 +17,10 @@ export const GameState = {
   FINISHED: "FINISHED",
 };
 
+/**
+ * Coordinates the complete penalty-shot lifecycle: aiming, charging, shooting,
+ * result evaluation, scoring, and reset.
+ */
 export class GameStateMachine {
   constructor(ui) {
     /** @type {UIManager} */
@@ -28,44 +28,44 @@ export class GameStateMachine {
 
     this.state = GameState.READY;
 
-    // Şut parametreleri
+    // Shot parameters.
     this.shotProgress = 0.0;
     this.shotDuration = 0.8;
     this.arcHeight = 2.0;
     this.ballStartPosition = null;
     this.ballTargetPosition = null;
 
-    // Spin ve güç
+    // Spin and power.
     this.sideSpin = 0.0;
     this.verticalSpin = 0.0;
     this.shotPower = 0.0;
     this.maxPower = 3.0;
 
-    // Kaleci
+    // Goalkeeper positions.
     this.gkStartPosition = null;
     this.gkTargetPosition = null;
 
-    // Skor
+    // Score counters.
     this.goalsCount = 0;
     this.savesCount = 0;
 
-    // Kaleci kurtarma sekme fiziği değişkenleri
+    // Save deflection state.
     this.hasSavedBall = false;
     this.saveProgressT = 0.0;
     this.saveBounceStart = null;
     this.saveBounceDirection = null;
 
-    // Gol değerlendirme ve 3 saniyelik kutlama geciktirme değişkenleri
+    // Result evaluation is delayed so the post-shot animation can continue.
     this.resultEvaluated = false;
     this.shotResult = null;
 
-    // Mouse durumu
+    // Mouse release is captured as a transient state during shot charging.
     this.mouseReleased = false;
     window.addEventListener("mouseup", () => { this.mouseReleased = false; });
   }
 
   /**
-   * Her frame'de çağrılır. Mevcut duruma göre uygun güncellemeyi yapar.
+   * Advances the active gameplay state for the current frame.
    */
   update(deltaTime, scene, input, camera) {
     const crosshair = this.findOrCreateCrosshair(scene);
@@ -88,11 +88,11 @@ export class GameStateMachine {
     }
   }
 
-  // ------------------------------------------
-  // DURUM 1: HAZIRLIK VE NİŞAN ALMA (READY)
-  // ------------------------------------------
+  /**
+   * Handles aiming, goalkeeper placement, and mouse picking before the shot.
+   */
   updateReady(deltaTime, input, camera, crosshair, ballObject, gkObj) {
-    // Kaleci slider kontrolü
+    // The goalkeeper may be repositioned only before the shot starts.
     const gkSlider = document.getElementById("goalkeeperX");
     if (gkSlider && gkObj) {
       gkObj.transform.position.x = parseFloat(gkSlider.value);
@@ -104,18 +104,18 @@ export class GameStateMachine {
       }
     }
 
-    // Crosshair klavye hareketi
+    // Arrow keys move the aiming target inside the goal frame.
     const moveSpeed = 4.0 * deltaTime;
     if (input.isKeyDown("ArrowLeft")) crosshair.transform.position.x -= moveSpeed;
     if (input.isKeyDown("ArrowRight")) crosshair.transform.position.x += moveSpeed;
     if (input.isKeyDown("ArrowUp")) crosshair.transform.position.y += moveSpeed;
     if (input.isKeyDown("ArrowDown")) crosshair.transform.position.y -= moveSpeed;
 
-    // Crosshair sınırları (Standard kale sınırlarına ve 90 köşelere ulaşabilmesi için genişletildi)
+    // Clamp the target to a playable region around the goal mouth.
     crosshair.transform.position.x = Math.max(-3.5, Math.min(3.5, crosshair.transform.position.x));
     crosshair.transform.position.y = Math.max(0.2, Math.min(2.9, crosshair.transform.position.y));
 
-    // Topa tıklama — spin hesabı ve CHARGING'e geçiş
+    // A valid ray-sphere hit on the ball starts charging and stores spin.
     if (input.wasMouseClicked()) {
       const mouse = input.getMousePosition();
 
@@ -133,14 +133,14 @@ export class GameStateMachine {
           const hitOffsetX = hitPoint.x - ballObject.transform.position.x;
           const hitOffsetY = hitPoint.y - ballObject.transform.position.y;
           
-          // Orijinal tıklama konumuna göre kavis katsayılarına geri dönüyoruz
+          // Click offset controls the shot curve and vertical spin.
           this.sideSpin = -hitOffsetX * 6.5;
           this.verticalSpin = -hitOffsetY * 3.5;
 
           this.shotPower = 0.0;
           this.mouseReleased = false;
 
-          // Mouse bırakıldığında flag'i set et
+          // Mouseup ends the charging phase and commits the shot.
           const onMouseUp = () => {
             this.mouseReleased = true;
             window.removeEventListener("mouseup", onMouseUp);
@@ -154,14 +154,13 @@ export class GameStateMachine {
     }
   }
 
-  // ------------------------------------------
-  // DURUM 1.5: ŞİDDETİ ŞARJ ETME (CHARGING)
-  // ------------------------------------------
+  /**
+   * Accumulates shot power while the mouse is held, then launches the shot.
+   */
   updateCharging(deltaTime, ballObject, crosshair, gkObj) {
     this.shotPower += deltaTime * 2.5;
     if (this.shotPower > this.maxPower) this.shotPower = this.maxPower;
 
-    // Güç barı güncelleme
     this.ui.updatePowerFill(this.shotPower / this.maxPower);
 
     if (this.mouseReleased) {
@@ -179,14 +178,14 @@ export class GameStateMachine {
           crosshair.transform.position.z
         );
 
-        // Şut parametrelerini hesapla
+        // Convert charged power and spin into timing and arc parameters.
         const params = BallTrajectory.computeShotParams(
           this.shotPower, this.maxPower, this.verticalSpin
         );
         this.shotDuration = params.shotDuration;
         this.arcHeight = params.arcHeight;
 
-        // Kaleci dalış hedefini hesapla
+        // The keeper chooses a target before the shot animation begins.
         if (gkObj) {
           this.gkStartPosition = new Vec3(
             gkObj.transform.position.x,
@@ -206,21 +205,21 @@ export class GameStateMachine {
     }
   }
 
-  // ------------------------------------------
-  // DURUM 2: ŞUT VE ATLAYIŞ (SHOOTING)
-  // ------------------------------------------
+  /**
+   * Animates the ball, goalkeeper, save deflections, and final result evaluation.
+   */
   updateShooting(deltaTime, ballObject, gkObj) {
     this.shotProgress += deltaTime / this.shotDuration;
 
     const t = this.shotProgress;
 
-    // Top pozisyonunu hesapla
+    // The trajectory function owns all spin, arc, and post-bounce motion.
     const ballPos = BallTrajectory.computePosition(
       t, this.ballStartPosition, this.ballTargetPosition,
       this.sideSpin, this.verticalSpin, this.arcHeight
     );
 
-    // Kaleci kurtarma anını sürekli havada denetle (t > 0.65 iken top kaleciye ulaşır)
+    // During the active save window, proximity to the keeper can trigger a deflection.
     if (!this.hasSavedBall && gkObj && t > 0.65 && t < 0.95) {
       const gkPos = gkObj.transform.position;
       const dx = ballPos.x - gkPos.x;
@@ -229,7 +228,7 @@ export class GameStateMachine {
       const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
       if (dist < 1.1) {
-        // Güç oranına göre kurtarma şansını hesapla (Collision.js mantığı)
+        // Powerful shots have a chance to pass through the keeper's reach.
         const shotPowerRatio = this.shotPower / this.maxPower;
         const isGkSave = !(shotPowerRatio > 0.7 && Math.random() < 0.35);
 
@@ -237,7 +236,7 @@ export class GameStateMachine {
           this.hasSavedBall = true;
           this.saveProgressT = t;
           this.saveBounceStart = new Vec3(ballPos.x, ballPos.y, ballPos.z);
-          // Kalecinin eline çarpıp sahaya geri sekme vektörü (Z sahanın içine doğru pozitif)
+          // Positive Z sends the deflected ball back into the field.
           this.saveBounceDirection = new Vec3(
             (dx + (Math.random() - 0.5) * 0.4) * 0.4,
             0.6 + Math.random() * 0.4,
@@ -249,7 +248,7 @@ export class GameStateMachine {
 
     let finalBallPos = ballPos;
     if (this.hasSavedBall) {
-      // Top kaleciye çarptıysa sahanın içine sekip yerde kalır, arkaya sızmaz
+      // Saved shots bounce back into the field rather than leaking into the net.
       const tb = (t - this.saveProgressT) / (1.0 - this.saveProgressT + 0.001);
       const bounceX = this.saveBounceStart.x + this.saveBounceDirection.x * tb;
       const bounceY = Math.max(0.3, this.saveBounceStart.y + this.saveBounceDirection.y * Math.sin(tb * Math.PI) - 0.5 * tb);
@@ -260,20 +259,20 @@ export class GameStateMachine {
     if (ballObject) {
       ballObject.transform.position = finalBallPos;
 
-      // Realistik Top Spini (Görsel Dönen Top Etkisi)
-      const rotationSpeed = 24.0; // Dönme hızı katsayısı
+      // Visual ball rotation reinforces the selected spin and shot speed.
+      const rotationSpeed = 24.0;
       
-      // Dikey spin (backspin / topspin) X eksenindeki dönüşü etkiler (ileri doğru yuvarlanma dahil)
+      // Vertical spin affects forward rolling and topspin/backspin appearance.
       ballObject.transform.rotation.x += deltaTime * rotationSpeed * (1.2 + this.verticalSpin * 0.4);
       
-      // Yatay spin (falso) Y ekseninde güçlü bir dönme oluşturur
+      // Side spin produces visible rotation around the vertical axis.
       ballObject.transform.rotation.y += deltaTime * this.sideSpin * 8.0;
       
-      // Z ekseninde hafif salınım (tumble) spini
+      // A small tumble component avoids perfectly mechanical rotation.
       ballObject.transform.rotation.z += deltaTime * rotationSpeed * 0.15;
     }
 
-    // Kaleci interpolasyonu
+    // Use the hierarchical animation when available; otherwise use fallback interpolation.
     if (gkObj && this.gkStartPosition && this.gkTargetPosition) {
       if (typeof gkObj.setDiveProgress === "function") {
         gkObj.setDiveProgress(Math.min(1.0, t), this.gkStartPosition, this.gkTargetPosition);
@@ -285,17 +284,16 @@ export class GameStateMachine {
       }
     }
 
-    // ── Result Evaluation (runs once when t crosses 1.0) ─────────────────────
-    // IMPORTANT: This block must use the SAME impact-point calculation as
+    // Result evaluation runs once when the ball reaches the goal plane.
+    // This block must use the same impact-point calculation as
     // BallTrajectory.js.  The ball's real position at impact includes sideSpin,
     // which shifts the ball away from target.x/target.y.  Checking target.*
-    // directly with a wide tolerance (the old ±0.35 approach) is what caused
-    // wide shots to falsely register as post hits.
+    // directly would desynchronize the visual path and logical result.
     if (!this.resultEvaluated && t >= 1.0) {
       this.resultEvaluated = true;
 
-      // Replicate BallTrajectory's xAtImpact / yAtImpact calculation exactly
-      // so the three files share the same coordinate frame.
+      // Replicate BallTrajectory's impact coordinates exactly so all modules
+      // share the same frame of reference.
       const collisionT   = 0.90;
       const st           = this.ballStartPosition;
       const tg           = this.ballTargetPosition;
@@ -306,11 +304,11 @@ export class GameStateMachine {
                          + (arcImpact * this.arcHeight)
                          + (this.verticalSpin * collisionT * (1.0 - collisionT));
 
-      // STEP 1 — Absolute MISS: ball was clearly outside the goal frame at impact.
+      // STEP 1: absolute miss when the impact point is outside the goal frame.
       // Mirrors BallTrajectory.js isClearMiss and Collision.js STEP 1.
       const isClearMiss = xAtImpact < -4.0 || xAtImpact > 4.0 || yAtImpact > 3.3;
 
-      // STEP 2 — Strict post/crossbar hit (same bands as BallTrajectory.js STEP 2)
+      // STEP 2: strict post and crossbar bands.
       const hitLeft     = !isClearMiss
                        && xAtImpact >= -4.0 && xAtImpact <= -3.4
                        && yAtImpact <= 3.3;
@@ -323,7 +321,7 @@ export class GameStateMachine {
       const hitPost = hitLeft || hitRight || hitCrossbar;
 
       if (isClearMiss) {
-        // Ball was clearly wide/high — straightforward miss, no post bounce message
+        // Clear misses bypass post-bounce messaging.
         this.shotResult = ShotResult.MISS;
         this.ui.showScreenMessage("DIŞARIYA! ❌", "msg-miss");
       } else if (hitPost) {
@@ -352,29 +350,27 @@ export class GameStateMachine {
       }
     }
 
-    // Şutu anında bitirme, topun 3 saniye boyunca ağlara süzülmesini veya sahaya sekmesini sağla (t = 3.5'e kadar)
+    // Let the post-shot animation continue before allowing reset.
     let isFinished = false;
     if (this.shotProgress >= 3.5) {
       isFinished = true;
     }
 
-    // Şut tamamlandıysa sonuç kontrolü
     if (isFinished) {
       this.ui.showResetHint();
       this.state = GameState.FINISHED;
     }
   }
 
-  // ------------------------------------------
-  // DURUM 3: BİTİŞ VE RESET (FINISHED)
-  // ------------------------------------------
+  /**
+   * Waits for reset input after the result animation has completed.
+   */
   updateFinished(input, ballObject, crosshair) {
     if (input.wasKeyPressed("Space")) {
       if (ballObject) {
-        // Bug 2 FIX: Y = ballRadius (0.3) — top tam zemine oturur, havada kalmaz
-        // Bug 3 FIX: X=0, Z=0 — Ground.js'deki penaltySpot.transform.position = Vec3(0, lineY, 0) ile birebir eşleşir
+        // Reset the ball to the penalty spot and rest it on the grass.
         ballObject.transform.position = new Vec3(0, 0.3, 0);
-        // Önceki şuttan kalan dönüşü sıfırla
+        // Clear residual rotation from the previous shot.
         ballObject.transform.rotation  = new Vec3(Math.PI * 0.75, 0, 0);
       }
 
@@ -393,14 +389,12 @@ export class GameStateMachine {
     }
   }
 
-  // ------------------------------------------
-  // Yardımcı: Crosshair'i bul veya oluştur
-  // ------------------------------------------
+  /**
+   * Finds the existing crosshair or creates it lazily when the scene lacks one.
+   */
   findOrCreateCrosshair(scene) {
     let crosshair = scene.objects.find(obj => obj.name === "Crosshair");
     if (!crosshair) {
-      // Lazy import yerine scene dışından gelen bir factory kullanılabilir,
-      // ama şimdilik doğrudan import ediyoruz.
       const { TargetCrosshair } = this.getCrosshairModule();
       crosshair = new TargetCrosshair(this.gl);
       scene.add(crosshair);
@@ -409,8 +403,7 @@ export class GameStateMachine {
   }
 
   /**
-   * WebGL context ve TargetCrosshair modülünü set eder.
-   * main.js tarafından init sırasında çağrılır.
+   * Supplies dependencies that are created by the application entry point.
    */
   init(gl, crosshairModule) {
     this.gl = gl;

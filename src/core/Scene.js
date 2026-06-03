@@ -1,3 +1,6 @@
+/**
+ * Stores renderable objects and lights, then coordinates scene-level rendering.
+ */
 export class Scene {
   constructor({ camera = null } = {}) {
     this.objects = [];
@@ -21,7 +24,11 @@ export class Scene {
     }
   }
 
-  /** Işık uniform'larını shader'a gönder */
+  /**
+   * Uploads light and camera uniforms required by the active lighting shader.
+   *
+   * @param {ShaderProgram} shaderProgram - Active shader program.
+   */
   _applyLightUniforms(shaderProgram) {
     shaderProgram.setInt("uNumLights", this.lights.length);
 
@@ -29,18 +36,20 @@ export class Scene {
       this.lights[i].setUniforms(shaderProgram, i);
     }
 
-    // Global intensity — tüm ışıklar tek slider ile kontrol edilir
+    // A single UI slider controls the shared intensity value.
     if (this.lights.length > 0) {
       shaderProgram.setFloat("uLightIntensity", this.lights[0].intensity);
     }
 
-    // Kamera pozisyonu (specular hesabı için)
+    // The camera position is required for specular reflection.
     if (this.camera) {
       shaderProgram.setVec3("uCameraPos", this.camera.position);
     }
   }
 
-  /** Normal render pass */
+  /**
+   * Renders the scene from the camera view using the supplied shader.
+   */
   render(gl, shaderProgram) {
     if (this.camera && shaderProgram) {
       shaderProgram.setMat4("uViewMatrix", this.camera.getViewMatrix().elements);
@@ -53,14 +62,20 @@ export class Scene {
     }
   }
 
-  /** Shadow depth pass — sadece derinlik yazılır */
+  /**
+   * Renders only geometry depth from the active light's point of view.
+   */
   renderDepthPass(gl, depthShader) {
     for (const object of this.objects) {
       this._renderObjectDepth(gl, depthShader, object);
     }
   }
 
-  /** @private Recursive depth render */
+  /**
+   * Recursively renders hierarchical objects during the depth pass.
+   *
+   * @private
+   */
   _renderObjectDepth(gl, shader, object) {
     if (!object.visible) return;
 
@@ -71,7 +86,7 @@ export class Scene {
       object.geometry.draw(shader);
     }
 
-    // Alt nesneleri de çiz (StadiumLights, GoalPost, Goalkeeper gibi hiyerarşik objeler)
+    // Composite objects expose childrenObjects so non-root meshes also cast shadows.
     if (object.childrenObjects) {
       for (const child of object.childrenObjects) {
         this._renderObjectDepth(gl, shader, child);

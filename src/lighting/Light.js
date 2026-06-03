@@ -1,10 +1,8 @@
 import { Vec3 } from "../math/Vec3.js";
 
-// ============================================================
-// Temel Işık Sınıfı
-// Nokta ışığı temsil eder: konum, renk ve yoğunluk.
-// ============================================================
-
+/**
+ * Basic point-light data model used by the scene lighting shader.
+ */
 export class Light {
   constructor({
     position = new Vec3(0, 10, 0),
@@ -14,18 +12,19 @@ export class Light {
     this.position = position;
     this.color = color;
     this.intensity = intensity;
-    this.enabled = true; // Varsayılan olarak ışık açık
+    this.enabled = true;
   }
 
   /**
-   * Işık uniform'larını shader'a gönderir.
-   * @param {ShaderProgram} shader
-   * @param {number} index — uLightPos[index] formatı
+   * Uploads this light into the shader's light array.
+   *
+   * @param {ShaderProgram} shader - Active shader program.
+   * @param {number} index - Light array index.
    */
   setUniforms(shader, index) {
     shader.setVec3(`uLightPos[${index}]`, this.position);
     
-    // Işık sönükse shader'a rengi (0, 0, 0) olarak yollayarak aydınlatmasını sıfırlıyoruz
+    // Disabled lights are represented as black contributors in the shader.
     const finalColor = this.enabled ? this.color : new Vec3(0, 0, 0);
     shader.setVec3(`uLightColor[${index}]`, finalColor);
   }

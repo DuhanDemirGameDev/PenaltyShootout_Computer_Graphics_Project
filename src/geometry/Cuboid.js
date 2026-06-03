@@ -7,60 +7,59 @@ export class Cuboid extends Geometry {
   }
 
   static generate(width = 1, height = 1, depth = 1) {
-    // Merkezden köşelere olan uzaklıklar
     const hw = width / 2;
     const hh = height / 2;
     const hd = depth / 2;
 
-    // Bir küboidin 6 yüzü vardır. Her yüz için 4 köşe tanımlıyoruz (Toplam 24 nokta)
+    // Each face has unique vertices so flat normals and UVs remain independent.
     const positions = [
-      // Ön yüz (Z+)
+      // Front face (Z+).
       -hw, -hh,  hd,   hw, -hh,  hd,   hw,  hh,  hd,  -hw,  hh,  hd,
-      // Arka yüz (Z-)
+      // Back face (Z-).
       -hw, -hh, -hd,  -hw,  hh, -hd,   hw,  hh, -hd,   hw, -hh, -hd,
-      // Üst yüz (Y+)
+      // Top face (Y+).
       -hw,  hh, -hd,  -hw,  hh,  hd,   hw,  hh,  hd,   hw,  hh, -hd,
-      // Alt yüz (Y-)
+      // Bottom face (Y-).
       -hw, -hh, -hd,   hw, -hh, -hd,   hw, -hh,  hd,  -hw, -hh,  hd,
-      // Sağ yüz (X+)
+      // Right face (X+).
        hw, -hh, -hd,   hw,  hh, -hd,   hw,  hh,  hd,   hw, -hh,  hd,
-      // Sol yüz (X-)
+      // Left face (X-).
       -hw, -hh, -hd,  -hw, -hh,  hd,  -hw,  hh,  hd,  -hw,  hh, -hd,
     ];
 
-    // Işıklandırma için yüzey normalleri
+    // Face normals for flat lighting.
     const normals = [
-      // Ön
+      // Front.
        0,  0,  1,   0,  0,  1,   0,  0,  1,   0,  0,  1,
-      // Arka
+      // Back.
        0,  0, -1,   0,  0, -1,   0,  0, -1,   0,  0, -1,
-      // Üst
+      // Top.
        0,  1,  0,   0,  1,  0,   0,  1,  0,   0,  1,  0,
-      // Alt
+      // Bottom.
        0, -1,  0,   0, -1,  0,   0, -1,  0,   0, -1,  0,
-      // Sağ
+      // Right.
        1,  0,  0,   1,  0,  0,   1,  0,  0,   1,  0,  0,
-      // Sol
+      // Left.
       -1,  0,  0,  -1,  0,  0,  -1,  0,  0,  -1,  0,  0,
     ];
 
-    // Resim kaplamak için UV koordinatları
+    // Per-face texture coordinates.
     const uvs = [
-      // Ön
+      // Front.
       0, 1,  1, 1,  1, 0,  0, 0,
-      // Arka
+      // Back.
       1, 1,  1, 0,  0, 0,  0, 1,
-      // Üst
+      // Top.
       0, 0,  0, 1,  1, 1,  1, 0,
-      // Alt
+      // Bottom.
       1, 1,  0, 1,  0, 0,  1, 0,
-      // Sağ
+      // Right.
       1, 1,  1, 0,  0, 0,  0, 1,
-      // Sol
+      // Left.
       0, 1,  1, 1,  1, 0,  0, 0,
     ];
 
-    // Noktaları üçgenlere çevirme (Her yüz 2 üçgenden, yani 6 indeksten oluşur)
+    // Each cuboid face is composed of two indexed triangles.
     const indices = [];
     for (let i = 0; i < 6; i++) {
       const offset = i * 4;

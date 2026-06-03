@@ -5,18 +5,16 @@ export class Cone extends Geometry {
         const positions = [];
         const indices = [];
 
-        // 1. Yan yüzeyler (Koninin kenarları)
-        // Tepedeki nokta (Apex)
+        // Apex vertex.
         positions.push(0, height, 0);
 
-        // Taban çemberindeki noktalar
+        // Base ring vertices.
         for (let i = 0; i <= radialSegments; i++) {
             const angle = (i / radialSegments) * Math.PI * 2;
             const x = Math.cos(angle) * radius;
             const z = Math.sin(angle) * radius;
             positions.push(x, 0, z);
 
-            // Üçgenleri oluştur
             if (i < radialSegments) {
                 const apexIndex = 0;
                 const baseIndex1 = i + 1;

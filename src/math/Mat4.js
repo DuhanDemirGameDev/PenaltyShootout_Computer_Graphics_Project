@@ -1,5 +1,8 @@
 import { Vec3 } from "./Vec3.js";
 
+/**
+ * Column-major 4x4 matrix utility aligned with WebGL uniform conventions.
+ */
 export class Mat4 {
   constructor(elements) {
     this.elements = elements
@@ -11,6 +14,13 @@ export class Mat4 {
     return Mat4.multiply(this, otherMatrix);
   }
 
+  /**
+   * Transforms a Vec3 by this matrix, including perspective divide when needed.
+   *
+   * @param {Vec3} vector - Input vector.
+   * @param {number} w - Homogeneous coordinate.
+   * @returns {Vec3} Transformed vector.
+   */
   transformVec3(vector, w = 1) {
     const m = this.elements;
     const x = vector.x;
@@ -38,6 +48,13 @@ export class Mat4 {
     ]);
   }
 
+  /**
+   * Multiplies two matrices using column-major indexing.
+   *
+   * @param {Mat4} a - Left-hand matrix.
+   * @param {Mat4} b - Right-hand matrix.
+   * @returns {Mat4} Product matrix.
+   */
   static multiply(a, b) {
     const left = a.elements;
     const right = b.elements;
@@ -65,7 +82,16 @@ export class Mat4 {
     ]);
   }
   
-  static invert(matrix){
+  /**
+   * Computes the inverse of a 4x4 matrix.
+   *
+   * Matrix inversion is required for mouse picking because screen-space points
+   * must be unprojected through the inverse projection and view transforms.
+   *
+   * @param {Mat4} matrix - Matrix to invert.
+   * @returns {Mat4} Inverted matrix, or the original matrix when singular.
+   */
+  static invert(matrix) {
 
     const m = matrix.elements;
     const inv = new Float32Array(16);
@@ -88,7 +114,7 @@ export class Mat4 {
 
     let det = m[0]*inv[0] + m[1]*inv[4] + m[2]*inv[8] + m[3]*inv[12];
     
-    // Eğer determinant 0 ise matrisin tersi alınamaz
+    // A zero determinant means the matrix is singular and cannot be inverted.
     if (det === 0) return matrix; 
 
     det = 1.0 / det;

@@ -7,21 +7,20 @@ export class Goalkeeper extends GameObject {
   constructor(gl) {
     super({ name: "Goalkeeper Root" });
 
-    const jerseyMaterial = { color: new Vec3(0.1, 0.2, 0.8) }; // Gece Mavisi forma
-    const skinMaterial = { color: new Vec3(0.9, 0.75, 0.6) };  // Ten rengi
-    const shortsMaterial = { color: new Vec3(0.1, 0.1, 0.1) }; // Siyah şort
-    const gloveMaterial = { color: new Vec3(0.2, 0.2, 0.2) }; // Gri eldivenler
-    const shoeMaterial = { color: new Vec3(0.8, 0.9, 0.1) };   // Fosforlu sarı kramponlar
+    const jerseyMaterial = { color: new Vec3(0.1, 0.2, 0.8) };
+    const skinMaterial = { color: new Vec3(0.9, 0.75, 0.6) };
+    const shortsMaterial = { color: new Vec3(0.1, 0.1, 0.1) };
+    const gloveMaterial = { color: new Vec3(0.2, 0.2, 0.2) };
+    const shoeMaterial = { color: new Vec3(0.8, 0.9, 0.1) };
 
-    const torsoW = 0.75, torsoH = 0.9, torsoD = 0.3; // Gövde 
-    const legW = 0.28, legH = 0.95, legD = 0.25;     // Bacaklar 
-    const armW = 0.20, armH = 1.0, armD = 0.20;      // Kollar
+    const torsoW = 0.75, torsoH = 0.9, torsoD = 0.3;
+    const legW = 0.28, legH = 0.95, legD = 0.25;
+    const armW = 0.20, armH = 1.0, armD = 0.20;
     const headRadius = 0.23;
 
-    // Ayak tabanının tam y = 0 çizgisine oturması için gereken gövde yüksekliği
+    // Position the torso so the shoes rest exactly on the ground plane.
     const calculatedTorsoY = legH + (torsoH / 2) + 0.15;
 
-    //Gövde 
     const torso = new GameObject({
       name: "Torso",
       geometry: new Cuboid(gl, torsoW, torsoH, torsoD),
@@ -29,7 +28,6 @@ export class Goalkeeper extends GameObject {
     });
     torso.transform.position = new Vec3(0, calculatedTorsoY, 0);
 
-    //Kafa
     const head = new GameObject({
       name: "Head",
       geometry: new Sphere(gl, headRadius, 16, 16),
@@ -37,26 +35,25 @@ export class Goalkeeper extends GameObject {
     });
     head.transform.position = new Vec3(0, (torsoH / 2) + headRadius, 0);
 
-    //SOL KOL HİYERARŞİSİ (Omuz -> Kol -> Eldiven)
+    // Left arm hierarchy: shoulder -> arm -> glove.
     const leftShoulder = new GameObject({ name: "Left Shoulder" });
     leftShoulder.transform.position = new Vec3(-(torsoW / 2 + armW / 2) - 0.01, (torsoH / 2) - 0.1, 0);
 
     const leftArm = new GameObject({
       name: "Left Arm", geometry: new Cuboid(gl, armW, armH, armD), material: skinMaterial,
     });
-    leftArm.transform.position = new Vec3(0, -(armH / 2), 0); // Kolu omuzdan aşağı sarkıt
+    leftArm.transform.position = new Vec3(0, -(armH / 2), 0);
     
     const leftGlove = new GameObject({
       name: "Left Glove", geometry: new Cuboid(gl, armW + 0.06, 0.25, armD + 0.06), material: gloveMaterial,
     });
     leftGlove.transform.position = new Vec3(0, -(armH / 2 + 0.125), 0);
 
-    // Sol kol bağlamaları
     leftShoulder.transform.addChild(leftArm.transform);
     leftArm.transform.addChild(leftGlove.transform);
 
 
-    //SAĞ KOL HİYERARŞİSİ (Omuz -> Kol -> Eldiven)
+    // Right arm hierarchy: shoulder -> arm -> glove.
     const rightShoulder = new GameObject({ name: "Right Shoulder" });
     rightShoulder.transform.position = new Vec3((torsoW / 2 + armW / 2) + 0.01, (torsoH / 2) - 0.1, 0);
 
@@ -70,12 +67,11 @@ export class Goalkeeper extends GameObject {
     });
     rightGlove.transform.position = new Vec3(0, -(armH / 2 + 0.125), 0);
 
-    // Sağ kol bağlamaları
     rightShoulder.transform.addChild(rightArm.transform);
     rightArm.transform.addChild(rightGlove.transform);
 
 
-    //SOL BACAK HİYERARŞİSİ (Kalça -> Bacak -> Krampon)
+    // Left leg hierarchy: hip -> leg -> shoe.
     const leftHip = new GameObject({ name: "Left Hip" });
     leftHip.transform.position = new Vec3(-0.18, -(torsoH / 2), 0);
 
@@ -89,12 +85,11 @@ export class Goalkeeper extends GameObject {
     });
     leftShoe.transform.position = new Vec3(0, -(legH / 2 + 0.075), 0.05);
 
-    // Sol bacak bağlamaları
     leftHip.transform.addChild(leftLeg.transform);
     leftLeg.transform.addChild(leftShoe.transform);
 
 
-    //SAĞ BACAK HİYERARŞİSİ (Kalça -> Bacak -> Krampon)
+    // Right leg hierarchy: hip -> leg -> shoe.
     const rightHip = new GameObject({ name: "Right Hip" });
     rightHip.transform.position = new Vec3(0.18, -(torsoH / 2), 0);
 
@@ -108,11 +103,10 @@ export class Goalkeeper extends GameObject {
     });
     rightShoe.transform.position = new Vec3(0, -(legH / 2 + 0.075), 0.05);
 
-    // Sağ bacak bağlamaları
     rightHip.transform.addChild(rightLeg.transform);
     rightLeg.transform.addChild(rightShoe.transform);
 
-    // ANA HİYERARŞİ (Gövdeye Eklem Bağlantıları)
+    // The torso acts as the central parent for all articulated joints.
     this.transform.addChild(torso.transform);
     torso.transform.addChild(head.transform);
     torso.transform.addChild(leftShoulder.transform);  
@@ -120,15 +114,6 @@ export class Goalkeeper extends GameObject {
     torso.transform.addChild(leftHip.transform); 
     torso.transform.addChild(rightHip.transform);
 
-    /*
-    // === FAZ 2.12: HİYERARŞİ GÖSTERİM POZU ===
-    // Dönüş komutlarını artık geometriye değil, eklere (Joints) veriyoruz!
-    leftShoulder.transform.rotation.z = Math.PI * 0.75; // Sol kol omuzdan mükemmel kalkar
-    rightHip.transform.rotation.x = -Math.PI * 0.25;    // Sağ bacak kalçadan mükemmel kalkar
-    torso.transform.rotation.x = 0.1;
-    */
-
-    // Render listesi
     this.childrenObjects = [torso, head, leftArm, leftGlove, rightArm, rightGlove, leftLeg, leftShoe, rightLeg, rightShoe];
 
     this.joints = {
@@ -144,28 +129,28 @@ export class Goalkeeper extends GameObject {
       rightLeg
     };
 
-    // Kaleciyi kale çizgisinin tam önüne konumlandırıyoruz (Kale çizgisi Z = -7)
+    // Place the goalkeeper slightly in front of the goal line.
     this.transform.position = new Vec3(0, 0, -6.3);
     this.geometry = null;
 
-    // Hazır duruşunu başlangıçta uygula
     this.setDiveProgress(0, this.transform.position, this.transform.position);
   }
 
   /**
-   * Kalecinin dalış ve sıçrama animasyonunu eklemleriyle birlikte gerçekçi şekilde yönetir.
-   * @param {number} t - İlerleme oranı (0.0 -> 1.0)
-   * @param {Vec3} start - Başlangıç pozisyonu
-   * @param {Vec3} target - Hedef pozisyonu
+   * Updates the goalkeeper's dive pose through root motion and joint rotations.
+   *
+   * @param {number} t - Normalized progress from 0.0 to 1.0.
+   * @param {Vec3} start - Starting root position.
+   * @param {Vec3} target - Target root position.
    */
   setDiveProgress(t, start, target) {
     if (t === 0) {
-      // Başlangıç/Hazır Duruşu
+      // Ready stance.
       this.transform.position.x = start.x;
       this.transform.position.y = 0;
       this.transform.rotation = new Vec3(0, 0, 0);
 
-      // Dizler bükülü, gövde hafif öne eğik, kollar açık hazır bekleyiş duruşu
+      // A slight crouch and open shoulders give the keeper a prepared stance.
       this.joints.torso.transform.rotation = new Vec3(0.15, 0, 0);
       this.joints.head.transform.rotation = new Vec3(-0.05, 0, 0);
       this.joints.leftShoulder.transform.rotation = new Vec3(0.1, 0, 0.35);
@@ -177,18 +162,18 @@ export class Goalkeeper extends GameObject {
 
     const easeOutQuad = (x) => 1 - (1 - x) * (1 - x);
 
-    // 1. Yatay (X) Hareket (Gideceği noktaya kavisli hızlı ivmelenme)
+    // Horizontal movement accelerates quickly toward the chosen save target.
     const tX = easeOutQuad(t);
     const x = start.x + (target.x - start.x) * tX;
 
-    // 2. Dikey (Y) Zıplama - Çömelme ve ardından Parabolik Sıçrama (Fizik tabanlı)
+    // Vertical motion first compresses the body, then follows a jump arc.
     let y = 0;
-    const crouchDuration = 0.15; // İlk %15 çömelme süresi
+    const crouchDuration = 0.15;
     if (t < crouchDuration) {
       const cp = t / crouchDuration;
-      y = -0.32 * Math.sin(cp * Math.PI); // Hafif yaylanıp çömelme payı
+      y = -0.32 * Math.sin(cp * Math.PI);
 
-      // Çömelirken eklemlerin bükülmesi
+      // The crouch phase bends the torso and hips before takeoff.
       this.joints.torso.transform.rotation = new Vec3(0.15 + 0.22 * cp, 0, 0);
       this.joints.head.transform.rotation = new Vec3(-0.05 - 0.03 * cp, 0, 0);
       this.joints.leftHip.transform.rotation = new Vec3(-0.25 - 0.3 * cp, 0, 0);
@@ -198,73 +183,66 @@ export class Goalkeeper extends GameObject {
       
       this.transform.rotation = new Vec3(0, 0, 0);
     } else {
-      const lp = (t - crouchDuration) / (1 - crouchDuration); // Sıçrama/Uçuş süreci (0.0 -> 1.0)
+      const lp = (t - crouchDuration) / (1 - crouchDuration);
       
-      // Zıplama yüksekliği interpolasyonu + Yerçekimine karşı yukarı uçuş yayı
+      // Combine target elevation with a temporary flight arc.
       const baseHeight = 0 + (target.y - 0) * lp;
-      const jumpArc = Math.sin(lp * Math.PI) * 0.9; // Havaya sıçrama yayı
+      const jumpArc = Math.sin(lp * Math.PI) * 0.9;
       y = baseHeight + jumpArc;
 
-      // Kalecinin tüm gövdesini dalış açısına göre döndür
-      const direction = target.x - start.x; // < 0 sola dalış, > 0 sağa dalış
-      const diveAngle = direction * 0.45; // Dalış yatış açısı derecesi
+      // Roll the whole body into the dive direction.
+      const direction = target.x - start.x;
+      const diveAngle = direction * 0.45;
       this.transform.rotation = new Vec3(0, 0, -diveAngle * lp);
 
-      // Gövde dalış yönünde hafif döner; Y ekseninde 0.15 * lp ile sınırlı
+      // The torso rotates slightly toward the save direction for a natural reach.
       this.joints.torso.transform.rotation = new Vec3(0.1 * lp, direction * 0.12 * lp, 0);
       this.joints.head.transform.rotation = new Vec3(0, 0, 0);
 
-      // Eklemlerin dalış yönüne göre gerilmesi (Anatomik uçuş pozu)
-      // Omuz ekseninde:
-      //   - Z dönüşü: Kolun vücuttan yanlara açılması (adduction/abduction)
-      //   - X dönüşü: Kolun öne/arkaya uzanması (flexion/extension) - dalış uzanması için ÖNEMLİ
+      // Shoulder X rotation reaches forward; shoulder Z rotation opens the arms laterally.
       if (direction < -0.2) {
-        // SOLA DALIŞ — Sol kollar ileri ve yukarı uzanır, sağ kol denge için hafifçe açılır
-        // Sol omuz: vücuttan yukarı ve sola kaldır (Z), dalış yönünde hafif öne (X)
+        // Left dive: lead with the left arm while the right arm balances the pose.
         this.joints.leftShoulder.transform.rotation = new Vec3(
-          -Math.PI * 0.20 * lp,          // X: dalış yönünde hafif öne eğim
+          -Math.PI * 0.20 * lp,
            0,
-           Math.PI * 0.55 * lp            // Z: sol kolu yukarı ve sola kaldır
+           Math.PI * 0.55 * lp
         );
-        // Sağ omuz: denge için karşı tarafta orta açı, doğal poz
         this.joints.rightShoulder.transform.rotation = new Vec3(
-           Math.PI * 0.10 * lp,           // X: hafif geriye (denge)
+           Math.PI * 0.10 * lp,
            0,
-          -Math.PI * 0.30 * lp            // Z: sağ kolu vücuttan hafifçe aç
+          -Math.PI * 0.30 * lp
         );
 
-        // Bacak pozu: Sol bacak (yere yakın) hafif bükülerek destek sağlar, sağ bacak uzanır
         this.joints.leftHip.transform.rotation  = new Vec3(-0.15 * lp, 0, -0.25 * lp);
         this.joints.rightHip.transform.rotation = new Vec3(-0.35 * lp, 0, -0.40 * lp);
 
       } else if (direction > 0.2) {
-        // SAĞA DALIŞ — Sağ kol ileri ve yukarı uzanır, sol kol denge için hafifçe açılır
+        // Right dive: mirror the left-dive pose.
         this.joints.rightShoulder.transform.rotation = new Vec3(
-          -Math.PI * 0.20 * lp,           // X: dalış yönünde hafif öne eğim
+          -Math.PI * 0.20 * lp,
            0,
-          -Math.PI * 0.55 * lp            // Z: sağ kolu yukarı ve sağa kaldır
+          -Math.PI * 0.55 * lp
         );
         this.joints.leftShoulder.transform.rotation = new Vec3(
-           Math.PI * 0.10 * lp,           // X: hafif geriye (denge)
+           Math.PI * 0.10 * lp,
            0,
-           Math.PI * 0.30 * lp            // Z: sol kolu vücuttan hafifçe aç
+           Math.PI * 0.30 * lp
         );
 
-        // Bacak pozu: Sağ bacak (yere yakın) hafif bükülerek destek sağlar, sol bacak uzanır
         this.joints.rightHip.transform.rotation = new Vec3(-0.15 * lp, 0,  0.25 * lp);
         this.joints.leftHip.transform.rotation  = new Vec3(-0.35 * lp, 0,  0.40 * lp);
 
       } else {
-        // ORTAYA / DÜZ ZIPLAMA — İki kol simetrik olarak yukarı kalkar
+        // Central jump: raise both arms symmetrically.
         this.joints.leftShoulder.transform.rotation = new Vec3(
-          -Math.PI * 0.30 * lp,           // X: her iki kol ileri ve yukarı uzanır
+          -Math.PI * 0.30 * lp,
            0,
-           Math.PI * 0.50 * lp            // Z: sol kol sola ayrılır
+           Math.PI * 0.50 * lp
         );
         this.joints.rightShoulder.transform.rotation = new Vec3(
-          -Math.PI * 0.30 * lp,           // X: sağ kol ileri ve yukarı
+          -Math.PI * 0.30 * lp,
            0,
-          -Math.PI * 0.50 * lp            // Z: sağ kol sağa ayrılır
+          -Math.PI * 0.50 * lp
         );
 
         this.joints.leftHip.transform.rotation  = new Vec3(-0.20 * lp, 0, -0.15 * lp);

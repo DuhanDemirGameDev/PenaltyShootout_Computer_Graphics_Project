@@ -24,7 +24,6 @@ class SingleLightTower extends GameObject {
     this.transform.addChild(supportArm.transform);
     this.transform.addChild(lightPanel.transform);
 
-    // Kuleyi sahaya yerleştir
     this.transform.position = new Vec3(x, 0, z);
     this.transform.rotation.y = rotY;
 
@@ -44,7 +43,7 @@ export class StadiumLights extends GameObject {
   constructor(gl) {
     super({ name: "All Stadium Lights Root" });
     
-    // 4 Kuleyi oluşturup köke bağlıyoruz
+    // Four tower meshes are parented to a single root for scene-level placement.
     const farLeft = new SingleLightTower(gl, -9, -9, Math.PI * 0.25);
     const farRight = new SingleLightTower(gl, 9, -9, -Math.PI * 0.25);
     const nearLeft = new SingleLightTower(gl, -9, 7, Math.PI * 0.75);

@@ -1,3 +1,6 @@
+/**
+ * Thin wrapper around a WebGL shader program with cached uniform and attribute lookups.
+ */
 export class ShaderProgram {
   constructor(gl, vertexSource, fragmentSource) {
     this.gl = gl;
@@ -135,7 +138,12 @@ export class ShaderProgram {
     }
   }
 
-  //Shader'a boolean (true/false) bir değer göndermek için
+  /**
+   * Uploads a boolean uniform as an integer, matching GLSL ES expectations.
+   *
+   * @param {string} name - Uniform name.
+   * @param {boolean} value - Boolean value to upload.
+   */
   setBool(name, value) {
     const location = this.getUniformLocation(name);
 
@@ -144,14 +152,20 @@ export class ShaderProgram {
     }
   }
 
-  //Shader'a texture göndermek için
+  /**
+   * Binds a texture to a texture unit and assigns that unit to a sampler uniform.
+   *
+   * @param {string} name - Sampler uniform name.
+   * @param {WebGLTexture} texture - Texture object to bind.
+   * @param {number} textureUnit - Zero-based texture unit index.
+   */
   setTexture(name, texture, textureUnit = 0) {
     const location = this.getUniformLocation(name);
 
     if (location !== null) {
-      this.gl.activeTexture(this.gl.TEXTURE0 + textureUnit); // Aktif doku birimini seç
-      this.gl.bindTexture(this.gl.TEXTURE_2D, texture);      // Dokuyu bağla
-      this.gl.uniform1i(location, textureUnit);              // Shader'a hangi birimi kullanacağını söyle
+      this.gl.activeTexture(this.gl.TEXTURE0 + textureUnit);
+      this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+      this.gl.uniform1i(location, textureUnit);
     }
   }
 }

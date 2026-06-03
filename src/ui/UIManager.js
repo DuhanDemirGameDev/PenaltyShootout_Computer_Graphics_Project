@@ -1,8 +1,6 @@
-// ============================================================
-// UI Yöneticisi
-// HTML arayüz elemanlarının tüm DOM işlemlerini merkezi olarak yönetir.
-// ============================================================
-
+/**
+ * Centralizes HUD and scoreboard DOM updates for the simulation.
+ */
 export class UIManager {
   constructor() {
     this.powerContainer = document.getElementById("powerContainer");
@@ -13,8 +11,6 @@ export class UIManager {
     this.resetHint = document.getElementById("resetHint");
   }
 
-  // --- Güç Barı ---
-
   showPowerBar() {
     if (this.powerContainer) this.powerContainer.style.display = "block";
   }
@@ -24,8 +20,9 @@ export class UIManager {
   }
 
   /**
-   * Güç barının doluluk oranını günceller.
-   * @param {number} ratio - 0.0 ile 1.0 arası doluluk oranı
+   * Updates the visible shot-power fill.
+   *
+   * @param {number} ratio - Fill ratio from 0.0 to 1.0.
    */
   updatePowerFill(ratio) {
     if (this.powerFill) {
@@ -33,12 +30,11 @@ export class UIManager {
     }
   }
 
-  // --- Ekran Mesajları ---
-
   /**
-   * Ekrana büyük popup yazı basar.
-   * @param {string} text      - Gösterilecek metin
-   * @param {string} className - CSS sınıfı (msg-goal, msg-save, msg-miss)
+   * Shows a large result message.
+   *
+   * @param {string} text - Message text.
+   * @param {string} className - CSS class name such as msg-goal, msg-save, or msg-miss.
    */
   showScreenMessage(text, className) {
     if (this.gameMessage) {
@@ -53,19 +49,16 @@ export class UIManager {
     }
   }
 
-  // --- Skor Tabelası ---
-
   /**
-   * Gol ve kurtarış sayılarını günceller.
-   * @param {number} goals - Toplam gol sayısı
-   * @param {number} saves - Toplam kurtarış sayısı
+   * Updates the persistent goal/save counters.
+   *
+   * @param {number} goals - Total goals.
+   * @param {number} saves - Total saves.
    */
   updateScore(goals, saves) {
     if (this.goalScore) this.goalScore.innerText = goals;
     if (this.saveScore) this.saveScore.innerText = saves;
   }
-
-  // --- Reset İpucu ---
 
   showResetHint() {
     if (this.resetHint) this.resetHint.style.display = "block";

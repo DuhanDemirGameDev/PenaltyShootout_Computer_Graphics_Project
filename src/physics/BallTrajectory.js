@@ -1,28 +1,25 @@
 import { Vec3 } from "../math/Vec3.js";
 
-// ============================================================
-// Top Trajektori Hesaplaması
-// Şutun başlangıç ve hedef noktası arasındaki interpolasyonu,
-// yay yüksekliğini ve spin etkilerini hesaplar.
-// ============================================================
-
+/**
+ * Provides deterministic ball-flight equations for penalty shots.
+ */
 export class BallTrajectory {
   /**
-   * Verilen ilerleme oranına (t) göre topun 3D pozisyonunu hesaplar.
+   * Computes the ball position at a normalized shot progress value.
    *
-   * @param {number} t           - İlerleme oranı (0.0 → 1.0)
-   * @param {Vec3}   start      - Başlangıç pozisyonu
-   * @param {Vec3}   target     - Hedef pozisyonu (crosshair)
-   * @param {number} sideSpin   - Yatay spin etkisi
-   * @param {number} verticalSpin - Dikey spin etkisi
-   * @param {number} arcHeight  - Yay yüksekliği
-   * @returns {Vec3} Topun hesaplanan pozisyonu
+   * @param {number} t - Shot progress. Values greater than 1.0 continue the post-impact animation.
+   * @param {Vec3} start - Initial ball position.
+   * @param {Vec3} target - Crosshair target position.
+   * @param {number} sideSpin - Horizontal spin contribution.
+   * @param {number} verticalSpin - Vertical spin contribution.
+   * @param {number} arcHeight - Peak trajectory height.
+   * @returns {Vec3} Ball position in world space.
    */
   static computePosition(t, start, target, sideSpin, verticalSpin, arcHeight) {
-    // Top havada uçarken t değerinin 1.0'e kadar olan orijinal kısmı:
+    // The primary flight equation is clamped to the moment the ball reaches the goal plane.
     const tClamp = Math.min(1.0, t);
     
-    // Orijinal X, Z ve asimetrik Y yay formülleri:
+    // Side spin curves horizontally, while the asymmetric sine arc creates a late dip.
     let currentX = (start.x + (target.x - start.x) * tClamp) + (sideSpin * tClamp * tClamp);
     let currentZ = start.z + (target.z - start.z) * tClamp;
     
@@ -31,26 +28,24 @@ export class BallTrajectory {
       + (asymmetricArc * arcHeight)
       + (verticalSpin * tClamp * (1.0 - tClamp));
 
-    // ── Post / Crossbar Bounce Detection ─────────────────────────────────────
-    // CRITICAL: Detection must use the ball's ACTUAL computed position at the
-    // moment of potential impact (t = collisionT), NOT the crosshair target.
-    // Using target.x/target.y was wrong because sideSpin shifts the real ball
-    // position away from the target, causing false post-hits for wide shots.
+    // Post and crossbar detection must use the ball's actual computed position
+    // at the moment of potential impact, not the original crosshair target.
+    // Side spin can move the physical ball away from the aimed target.
     //
-    // STEP 1 – Absolute MISS guard (checked first, highest priority)
-    //   If the ball's real position at impact is clearly outside the goal frame,
-    //   it is a guaranteed MISS. Skip all bounce logic entirely.
+    // STEP 1: Absolute miss guard.
+    //   If the real impact position is clearly outside the goal frame, the shot
+    //   is a guaranteed miss and bounce logic is skipped.
     //
-    // STEP 2 – Strict POST HIT margins (only if survived Step 1)
+    // STEP 2: Strict post-hit margins.
     //   Left post band  : x in [-4.0, -3.4]  and y <= 3.3
     //   Right post band : x in [ 3.4,  4.0]  and y <= 3.3
     //   Crossbar band   : y in [ 2.8,  3.3]  and x in (-3.4, 3.4)
     //
-    // STEP 3 – GOAL / free flight (handled downstream in Collision.js)
+    // STEP 3: Goal or free flight, handled downstream in Collision.js.
 
     const collisionT = 0.90;
 
-    // Compute the ball's REAL position at the impact moment (includes sideSpin)
+    // Compute the real position at the impact moment, including accumulated spin.
     const xAtImpact = (start.x + (target.x - start.x) * collisionT)
                     + (sideSpin * collisionT * collisionT);
     const asymmetricArcImpact = Math.sin(Math.pow(collisionT, 1.4) * Math.PI);
@@ -58,10 +53,10 @@ export class BallTrajectory {
                     + (asymmetricArcImpact * arcHeight)
                     + (verticalSpin * collisionT * (1.0 - collisionT));
 
-    // STEP 1 — Absolute MISS: ball is clearly outside the goal frame at impact
+    // STEP 1: the ball is clearly outside the goal frame at impact.
     const isClearMiss = xAtImpact < -4.0 || xAtImpact > 4.0 || yAtImpact > 3.3;
 
-    // STEP 2 — Strict post/crossbar margins (mutually exclusive, priority order)
+    // STEP 2: post and crossbar bands are mutually exclusive by priority.
     const hitLeft = !isClearMiss
                  && xAtImpact >= -4.0 && xAtImpact <= -3.4
                  && yAtImpact <= 3.3;
@@ -76,28 +71,28 @@ export class BallTrajectory {
 
     if (hitLeft || hitRight || hitCrossbar) {
       if (t > collisionT) {
-        const tb = (t - collisionT) / (3.5 - collisionT); // sekme süresini 3.5'e yay
+        const tb = (t - collisionT) / (3.5 - collisionT);
 
-        // Çarpışma anındaki Z konumu
+        // Preserve the actual collision depth before reflecting the ball.
         const zCol = start.z + (target.z - start.z) * collisionT;
 
-        // Z ekseninde sahaya doğru geri fırlama
+        // Reflect back toward the pitch after the frame impact.
         currentZ = zCol + 8.5 * tb;
 
-        // Her direğe özgü yansıma açısı
+        // Each goal-frame surface has a distinct visual rebound.
         if (hitLeft) {
-          currentX = xAtImpact + 4.5 * tb;  // Sol direkten sağa seker
+          currentX = xAtImpact + 4.5 * tb;
           currentY = Math.max(0.3, yAtImpact - 3.0 * tb * tb);
         } else if (hitRight) {
-          currentX = xAtImpact - 4.5 * tb;  // Sağ direkten sola seker
+          currentX = xAtImpact - 4.5 * tb;
           currentY = Math.max(0.3, yAtImpact - 3.0 * tb * tb);
-        } else { // hitCrossbar
+        } else {
           currentY = Math.max(0.3, yAtImpact - 6.0 * tb * tb);
           currentX = xAtImpact + (target.x - start.x) * 0.5 * tb;
         }
       }
     } else if (!isClearMiss && t > 1.0) {
-      // STEP 3 — Ball crossed the goal line without hitting a post.
+      // STEP 3: Ball crossed the goal line without hitting a post.
       // If it's inside the goal mouth, animate it settling into the net.
       const timeAfter = t - 1.0;
       const isGoalTarget = xAtImpact > -3.4 && xAtImpact < 3.4 && yAtImpact < 2.8;
@@ -106,20 +101,20 @@ export class BallTrajectory {
         currentY = Math.max(0.3, target.y - 3.2 * timeAfter * timeAfter);
         currentX = target.x + (sideSpin * 1.05);
       } else {
-        // Wide / high shot — ball continues flying out of bounds
+        // Wide or high shots continue flying out of bounds.
         currentZ = start.z + (target.z - start.z) * t;
         currentX = (start.x + (target.x - start.x) * t) + (sideSpin * t * t);
         currentY = Math.max(0.3, currentY - 5.0 * timeAfter * timeAfter);
       }
     } else if (isClearMiss && t > 1.0) {
-      // Guaranteed MISS: ball continues on its natural trajectory, no bouncing
+      // Guaranteed misses continue on the natural trajectory with no bounce.
       const timeAfter = t - 1.0;
       currentZ = start.z + (target.z - start.z) * t;
       currentX = (start.x + (target.x - start.x) * t) + (sideSpin * t * t);
       currentY = Math.max(0.3, currentY - 5.0 * timeAfter * timeAfter);
     }
 
-    // Topun zemine gömülmesini önle
+    // Keep the ball resting on the pitch instead of sinking below it.
     const ballRadius = 0.3;
     const finalY = Math.max(ballRadius, currentY);
 
@@ -127,12 +122,12 @@ export class BallTrajectory {
   }
 
   /**
-   * Şut gücü ve spin değerlerine göre süre ve yay yüksekliğini hesaplar.
+   * Computes duration and arc parameters from shot power and vertical spin.
    *
-   * @param {number} shotPower    - Şut gücü (0 → maxPower)
-   * @param {number} maxPower     - Maksimum güç değeri
-   * @param {number} verticalSpin - Dikey spin
-   * @returns {{ shotDuration: number, arcHeight: number }}
+   * @param {number} shotPower - Shot power from 0 to maxPower.
+   * @param {number} maxPower - Maximum power value.
+   * @param {number} verticalSpin - Vertical spin contribution.
+   * @returns {{ shotDuration: number, arcHeight: number }} Shot timing parameters.
    */
   static computeShotParams(shotPower, maxPower, verticalSpin) {
     let shotDuration = 1.2 - (shotPower / maxPower) * 0.85;

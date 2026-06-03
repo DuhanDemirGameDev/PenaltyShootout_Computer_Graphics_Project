@@ -10,7 +10,6 @@ export class Ground extends GameObject {
 
     this.childrenObjects = [];
 
-    //Kaplamayı zemin objesi kendi içinde yüklüyor
     const textureLoader = new TextureLoader(gl);
     const grassTexture = textureLoader.loadTexture("assets/textures/grass.jpg");
 
@@ -53,9 +52,8 @@ export class Ground extends GameObject {
 
     lines.push(boxFront, boxLeft, boxRight, smallFront, smallLeft, smallRight, penaltySpot, goalLine);
 
-    // E. DIŞ SAHA ÇİZGİLERİ (Taç ve Aut Çizgileri)
-    // Beyaz panolarla kamufle olmaması için çizgileri biraz içeriye (9.5) çekiyoruz
-    const pitchWidth = 19.0; // Çizgilerin boyunu da biraz kısalttık ki tam köşe yapsın
+    // Outer pitch lines are inset slightly so they remain visible near the ad boards.
+    const pitchWidth = 19.0;
     
     const outerLeft = new GameObject({ name: "Outer Left", geometry: new Cuboid(gl, t, 0.02, pitchWidth), material: lineMat });
     outerLeft.transform.position = new Vec3(-9.5, lineY, 0);
@@ -71,11 +69,10 @@ export class Ground extends GameObject {
 
     lines.push(outerLeft, outerRight, outerFront, outerBack);
 
-    // F. PENALTI YAYI (D-Shape Arc)
-    // Trigonometri kullanarak 16 küçük Cuboid parçasını döndürüp bir yay (yarım çember) çiziyoruz!
+    // Build the penalty arc from short cuboid segments tangent to a semicircle.
     const arcRadius = 2.5;
     const numSegments = 16;
-    // Yay, ceza sahasının ön çizgisinden (Z=1.5) sonra başlamalı
+    // The arc begins beyond the penalty-box front line at z = 1.5.
     const startAngle = Math.asin(1.5 / arcRadius);
     const endAngle = Math.PI - startAngle;
     const angleStep = (endAngle - startAngle) / numSegments;
@@ -86,11 +83,11 @@ export class Ground extends GameObject {
 
       const midTheta = (theta1 + theta2) / 2;
       const x = arcRadius * Math.cos(midTheta);
-      const z = arcRadius * Math.sin(midTheta); // Topun (penaltı noktasının) etrafında döner
+      const z = arcRadius * Math.sin(midTheta);
 
       const dx = arcRadius * Math.cos(theta2) - arcRadius * Math.cos(theta1);
       const dz = arcRadius * Math.sin(theta2) - arcRadius * Math.sin(theta1);
-      const segLength = Math.sqrt(dx*dx + dz*dz) + 0.05; // Çizgiler arası boşluk kalmasın diye uzatıldı
+      const segLength = Math.sqrt(dx*dx + dz*dz) + 0.05;
 
       const segment = new GameObject({
         name: `Arc Segment ${i}`,
@@ -99,12 +96,11 @@ export class Ground extends GameObject {
       });
 
     segment.transform.position = new Vec3(x, lineY, z);
-      segment.transform.rotation.y = Math.atan2(dx, dz); // Çizgiyi teğet olacak şekilde döndür
+      segment.transform.rotation.y = Math.atan2(dx, dz);
 
       lines.push(segment);
     }
 
-    // 3. TÜM ÇİZGİLERİ SAHNEYE EKLE
     for (const line of lines) {
       this.transform.addChild(line.transform);
       this.childrenObjects.push(line);
