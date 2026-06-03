@@ -210,11 +210,11 @@ export class Goalkeeper extends GameObject {
       const diveAngle = direction * 0.45; // Dalış yatış açısı derecesi
       this.transform.rotation = new Vec3(0, 0, -diveAngle * lp);
 
-      // FIX (Issue 3): Gövde dalış yönünde hafif döner; Y ekseninde 0.15 * lp ile sınırlı
+      // Gövde dalış yönünde hafif döner; Y ekseninde 0.15 * lp ile sınırlı
       this.joints.torso.transform.rotation = new Vec3(0.1 * lp, direction * 0.12 * lp, 0);
       this.joints.head.transform.rotation = new Vec3(0, 0, 0);
 
-      // FIX (Issue 3): Eklemlerin dalış yönüne göre gerilmesi (Anatomik uçuş pozu)
+      // Eklemlerin dalış yönüne göre gerilmesi (Anatomik uçuş pozu)
       // Omuz ekseninde:
       //   - Z dönüşü: Kolun vücuttan yanlara açılması (adduction/abduction)
       //   - X dönüşü: Kolun öne/arkaya uzanması (flexion/extension) - dalış uzanması için ÖNEMLİ
