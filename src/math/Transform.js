@@ -1,6 +1,9 @@
 import { Mat4 } from "./Mat4.js";
 import { Vec3 } from "./Vec3.js";
 
+/**
+ * Stores local transform state and maintains hierarchical world matrices.
+ */
 export class Transform {
   constructor() {
     this.position = new Vec3(0, 0, 0);
@@ -14,6 +17,11 @@ export class Transform {
     this.worldMatrix = Mat4.identity();
   }
 
+  /**
+   * Parents another transform under this transform.
+   *
+   * @param {Transform} transform - Child transform to attach.
+   */
   addChild(transform) {
     if (transform === this) {
       throw new Error("A transform cannot be added as a child of itself.");
@@ -32,6 +40,12 @@ export class Transform {
     transform.updateWorldMatrix();
   }
 
+  /**
+   * Detaches a child transform from this transform.
+   *
+   * @param {Transform} transform - Child transform to remove.
+   * @returns {boolean} True when the transform was removed.
+   */
   removeChild(transform) {
     const childIndex = this.children.indexOf(transform);
 
@@ -46,6 +60,12 @@ export class Transform {
     return true;
   }
 
+  /**
+   * Determines whether this transform is already below the supplied transform.
+   *
+   * @param {Transform} transform - Candidate ancestor.
+   * @returns {boolean} True when the supplied transform is an ancestor.
+   */
   isDescendantOf(transform) {
     let current = this.parent;
 
@@ -60,6 +80,11 @@ export class Transform {
     return false;
   }
 
+  /**
+   * Recomputes the local transformation matrix from position, rotation, and scale.
+   *
+   * @returns {Mat4} Updated local matrix.
+   */
   updateLocalMatrix() {
     const translation = Mat4.translation(
       this.position.x,
@@ -84,6 +109,11 @@ export class Transform {
     return this.localMatrix;
   }
 
+  /**
+   * Recomputes this transform and all descendants in world space.
+   *
+   * @returns {Mat4} Updated world matrix.
+   */
   updateWorldMatrix() {
     this.updateLocalMatrix();
 

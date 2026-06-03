@@ -1,4 +1,17 @@
+/**
+ * Owns WebGL buffers for indexed or non-indexed mesh geometry.
+ */
 export class Geometry {
+  /**
+   * Uploads geometry arrays to GPU buffers.
+   *
+   * @param {WebGLRenderingContext|WebGL2RenderingContext} gl - Rendering context.
+   * @param {Object} [data] - Mesh data arrays.
+   * @param {number[]} [data.positions] - Vertex positions as xyz triples.
+   * @param {number[]} [data.normals] - Vertex normals as xyz triples.
+   * @param {number[]} [data.uvs] - Texture coordinates as uv pairs.
+   * @param {number[]} [data.indices] - Triangle index buffer.
+   */
   constructor(gl, {
     positions = [],
     normals = [],
@@ -27,6 +40,12 @@ export class Geometry {
     return buffer;
   }
 
+  /**
+   * Creates an index buffer and selects the smallest supported index type.
+   *
+   * @param {number[]} data - Triangle indices.
+   * @returns {WebGLBuffer} GPU element array buffer.
+   */
   createIndexBuffer(data) {
     const buffer = this.gl.createBuffer();
     let maxIndex = 0;
@@ -56,6 +75,15 @@ export class Geometry {
     return buffer;
   }
 
+  /**
+   * Binds a vertex attribute if both the buffer and shader attribute are available.
+   *
+   * @param {ShaderProgram} shaderProgram - Active shader program wrapper.
+   * @param {string} attributeName - Attribute name in the GLSL program.
+   * @param {?WebGLBuffer} buffer - GPU buffer to bind.
+   * @param {number} size - Number of scalar components per vertex.
+   * @param {boolean} [warnIfMissing] - Whether to warn when the attribute is absent.
+   */
   bindAttribute(shaderProgram, attributeName, buffer, size, warnIfMissing = false) {
     if (!buffer) {
       return;
@@ -72,10 +100,14 @@ export class Geometry {
     this.gl.vertexAttribPointer(location, size, this.gl.FLOAT, false, 0, 0);
   }
 
+  /**
+   * Binds all mesh buffers required by the supplied shader program.
+   *
+   * @param {ShaderProgram} shaderProgram - Active shader program wrapper.
+   */
   bind(shaderProgram) {
     this.bindAttribute(shaderProgram, "aPosition", this.buffers.position, 3, true);
     this.bindAttribute(shaderProgram, "aNormal", this.buffers.normal, 3);
-    
     this.bindAttribute(shaderProgram, "aUv", this.buffers.uv, 2);
 
     if (this.buffers.index) {
@@ -83,6 +115,11 @@ export class Geometry {
     }
   }
 
+  /**
+   * Draws the mesh using triangles.
+   *
+   * @param {ShaderProgram} shaderProgram - Active shader program wrapper.
+   */
   draw(shaderProgram) {
     this.bind(shaderProgram);
 
@@ -93,6 +130,9 @@ export class Geometry {
     }
   }
 
+  /**
+   * Releases all GPU buffers owned by this geometry.
+   */
   delete() {
     for (const buffer of Object.values(this.buffers)) {
       if (buffer) {

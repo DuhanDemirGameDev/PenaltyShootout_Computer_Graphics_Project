@@ -4,15 +4,23 @@ import { Plane } from "../geometry/Plane.js";
 import { Vec3 } from "../math/Vec3.js";
 import { TextureLoader } from "../utils/TextureLoader.js";
 
+/**
+ * Builds the goal frame and textured net assembly.
+ */
 export class GoalPost extends GameObject {
+  /**
+   * Creates the posts, crossbar, and net planes.
+   *
+   * @param {WebGLRenderingContext|WebGL2RenderingContext} gl - Rendering context.
+   */
   constructor(gl) {
     super({ name: "GoalPost Root" });
-    
+
     const postRadius = 0.1;
     const postHeight = 3.0;
     const crossbarWidth = 7.32;
     const netDepth = 2.0;
-    
+
     const postMaterial = { color: new Vec3(0.9, 0.9, 0.9) };
 
     const textureLoader = new TextureLoader(gl);
@@ -92,15 +100,28 @@ export class GoalPost extends GameObject {
     this.childrenObjects = [leftPost, rightPost, crossbar, backNet, leftNet, rightNet, topNet];
 
     this.transform.position = new Vec3(0, 0, -7);
-    this.geometry = null; 
+    this.geometry = null;
   }
 
- render(gl, shaderProgram, camera) {
-    if (!this.visible) return null;
-    this.transform.updateWorldMatrix();
-    for (const child of this.childrenObjects) {
-        child.render(gl, shaderProgram, camera);
+  /**
+   * Renders each goal component because the root object is only a transform.
+   *
+   * @param {WebGLRenderingContext|WebGL2RenderingContext} gl - Rendering context.
+   * @param {ShaderProgram} shaderProgram - Active shader program wrapper.
+   * @param {Camera} camera - Active camera.
+   * @returns {?Mat4} World matrix of the root transform.
+   */
+  render(gl, shaderProgram, camera) {
+    if (!this.visible) {
+      return null;
     }
+
+    this.transform.updateWorldMatrix();
+
+    for (const child of this.childrenObjects) {
+      child.render(gl, shaderProgram, camera);
+    }
+
     return this.transform.worldMatrix;
   }
 }

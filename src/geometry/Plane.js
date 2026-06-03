@@ -1,11 +1,30 @@
 import { Geometry } from "../core/Geometry.js";
 
+/**
+ * Procedurally generates a subdivided horizontal plane.
+ */
 export class Plane extends Geometry {
+  /**
+   * Creates a plane mesh on the XZ plane.
+   *
+   * @param {WebGLRenderingContext|WebGL2RenderingContext} gl - Rendering context.
+   * @param {number} [width] - Plane width along the X axis.
+   * @param {number} [depth] - Plane depth along the Z axis.
+   * @param {number} [segments] - Number of subdivisions along each axis.
+   */
   constructor(gl, width = 10, depth = 10, segments = 1) {
     const data = Plane.generate(width, depth, segments);
     super(gl, data);
   }
 
+  /**
+   * Builds plane vertex, normal, UV, and index arrays.
+   *
+   * @param {number} [width] - Plane width along the X axis.
+   * @param {number} [depth] - Plane depth along the Z axis.
+   * @param {number} [segments] - Number of subdivisions along each axis.
+   * @returns {{positions: number[], normals: number[], uvs: number[], indices: number[]}} Mesh data.
+   */
   static generate(width = 10, depth = 10, segments = 1) {
     const positions = [];
     const normals = [];

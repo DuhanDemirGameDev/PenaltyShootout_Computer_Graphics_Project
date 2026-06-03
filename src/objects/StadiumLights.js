@@ -3,12 +3,23 @@ import { Cylinder } from "../geometry/Cylinder.js";
 import { Cuboid } from "../geometry/Cuboid.js";
 import { Vec3 } from "../math/Vec3.js";
 
+/**
+ * Visual mesh representation for one stadium floodlight tower.
+ */
 class SingleLightTower extends GameObject {
+  /**
+   * Creates a tower at the specified field position.
+   *
+   * @param {WebGLRenderingContext|WebGL2RenderingContext} gl - Rendering context.
+   * @param {number} x - World-space X position.
+   * @param {number} z - World-space Z position.
+   * @param {number} rotY - Y-axis rotation in radians.
+   */
   constructor(gl, x, z, rotY) {
     super({ name: "Light Tower" });
     const poleHeight = 8.0;
     const metalMat = { color: new Vec3(0.2, 0.2, 0.2) };
-    const lightMat = { color: new Vec3(1.0, 1.0, 0.9) }; 
+    const lightMat = { color: new Vec3(1.0, 1.0, 0.9) };
 
     const pole = new GameObject({ geometry: new Cylinder(gl, 0.15, poleHeight, 16), material: metalMat });
     pole.transform.position = new Vec3(0, poleHeight / 2, 0);
@@ -18,7 +29,7 @@ class SingleLightTower extends GameObject {
 
     const lightPanel = new GameObject({ geometry: new Cuboid(gl, 2.5, 1.0, 0.2), material: lightMat });
     lightPanel.transform.position = new Vec3(0, poleHeight, 0.5);
-    lightPanel.transform.rotation.x = -Math.PI / 6; 
+    lightPanel.transform.rotation.x = -Math.PI / 6;
 
     this.transform.addChild(pole.transform);
     this.transform.addChild(supportArm.transform);
@@ -30,19 +41,42 @@ class SingleLightTower extends GameObject {
     this.childrenObjects = [pole, supportArm, lightPanel];
     this.geometry = null;
   }
-  
+
+  /**
+   * Renders the tower components.
+   *
+   * @param {WebGLRenderingContext|WebGL2RenderingContext} gl - Rendering context.
+   * @param {ShaderProgram} shaderProgram - Active shader program wrapper.
+   * @param {Camera} camera - Active camera.
+   * @returns {?Mat4} World matrix of the tower root.
+   */
   render(gl, shaderProgram, camera) {
-    if (!this.visible) return null;
+    if (!this.visible) {
+      return null;
+    }
+
     this.transform.updateWorldMatrix();
-    for (const child of this.childrenObjects) child.render(gl, shaderProgram, camera);
+
+    for (const child of this.childrenObjects) {
+      child.render(gl, shaderProgram, camera);
+    }
+
     return this.transform.worldMatrix;
   }
 }
 
+/**
+ * Groups the four visible stadium light towers surrounding the pitch.
+ */
 export class StadiumLights extends GameObject {
+  /**
+   * Creates all floodlight tower meshes.
+   *
+   * @param {WebGLRenderingContext|WebGL2RenderingContext} gl - Rendering context.
+   */
   constructor(gl) {
     super({ name: "All Stadium Lights Root" });
-    
+
     // Four tower meshes are parented to a single root for scene-level placement.
     const farLeft = new SingleLightTower(gl, -9, -9, Math.PI * 0.25);
     const farRight = new SingleLightTower(gl, 9, -9, -Math.PI * 0.25);
@@ -58,10 +92,25 @@ export class StadiumLights extends GameObject {
     this.geometry = null;
   }
 
+  /**
+   * Renders every visible tower in the group.
+   *
+   * @param {WebGLRenderingContext|WebGL2RenderingContext} gl - Rendering context.
+   * @param {ShaderProgram} shaderProgram - Active shader program wrapper.
+   * @param {Camera} camera - Active camera.
+   * @returns {?Mat4} World matrix of the group root.
+   */
   render(gl, shaderProgram, camera) {
-    if (!this.visible) return null;
+    if (!this.visible) {
+      return null;
+    }
+
     this.transform.updateWorldMatrix();
-    for (const child of this.childrenObjects) child.render(gl, shaderProgram, camera);
+
+    for (const child of this.childrenObjects) {
+      child.render(gl, shaderProgram, camera);
+    }
+
     return this.transform.worldMatrix;
   }
 }

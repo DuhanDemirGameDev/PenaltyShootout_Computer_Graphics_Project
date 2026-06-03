@@ -1,3 +1,6 @@
+/**
+ * Tracks frame-to-frame timing for animation and simulation updates.
+ */
 export class Time {
   constructor() {
     this.deltaTime = 0;
@@ -5,6 +8,11 @@ export class Time {
     this.previousTimestamp = null;
   }
 
+  /**
+   * Advances the timer using the timestamp supplied by requestAnimationFrame.
+   *
+   * @param {number} currentTimestamp - Current high-resolution timestamp in milliseconds.
+   */
   update(currentTimestamp) {
     const currentTime = currentTimestamp * 0.001;
 

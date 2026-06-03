@@ -1,4 +1,15 @@
+/**
+ * Initializes the WebGL context and manages canvas resizing for the application.
+ */
 export class WebGLApp {
+  /**
+   * Creates a WebGL application wrapper for a canvas element.
+   *
+   * @param {string} canvasId - DOM id of the target canvas.
+   * @param {Object} [options] - Rendering options.
+   * @param {number[]} [options.clearColor] - RGBA clear color.
+   * @param {number} [options.pixelRatioLimit] - Maximum device pixel ratio used for the drawing buffer.
+   */
   constructor(canvasId, options = {}) {
     this.canvas = document.getElementById(canvasId);
 
@@ -19,6 +30,11 @@ export class WebGLApp {
     window.addEventListener("resize", this.handleResize);
   }
 
+  /**
+   * Creates the best available WebGL rendering context.
+   *
+   * @returns {WebGLRenderingContext|WebGL2RenderingContext} Initialized rendering context.
+   */
   createContext() {
     const contextAttributes = {
       alpha: false,
@@ -39,6 +55,9 @@ export class WebGLApp {
     return gl;
   }
 
+  /**
+   * Configures depth testing and clear state for the rendering context.
+   */
   configureContext() {
     const { gl } = this;
 
@@ -48,6 +67,9 @@ export class WebGLApp {
     gl.clearDepth(1.0);
   }
 
+  /**
+   * Resizes the canvas drawing buffer to match its displayed size.
+   */
   handleResize() {
     const pixelRatio = Math.min(window.devicePixelRatio || 1, this.pixelRatioLimit);
     const displayWidth = Math.floor(this.canvas.clientWidth * pixelRatio);
@@ -61,10 +83,16 @@ export class WebGLApp {
     this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
   }
 
+  /**
+   * Clears the color and depth buffers before a new frame is rendered.
+   */
   clear() {
     this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
   }
 
+  /**
+   * Removes browser event listeners owned by the application wrapper.
+   */
   destroy() {
     window.removeEventListener("resize", this.handleResize);
   }

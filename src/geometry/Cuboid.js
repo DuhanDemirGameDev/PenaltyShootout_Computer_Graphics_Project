@@ -1,11 +1,30 @@
 import { Geometry } from "../core/Geometry.js";
 
+/**
+ * Procedurally generates a textured cuboid with flat per-face normals.
+ */
 export class Cuboid extends Geometry {
+  /**
+   * Creates a cuboid mesh.
+   *
+   * @param {WebGLRenderingContext|WebGL2RenderingContext} gl - Rendering context.
+   * @param {number} [width] - Cuboid width along the X axis.
+   * @param {number} [height] - Cuboid height along the Y axis.
+   * @param {number} [depth] - Cuboid depth along the Z axis.
+   */
   constructor(gl, width = 1, height = 1, depth = 1) {
     const data = Cuboid.generate(width, height, depth);
     super(gl, data);
   }
 
+  /**
+   * Builds cuboid vertex, normal, UV, and index arrays.
+   *
+   * @param {number} [width] - Cuboid width along the X axis.
+   * @param {number} [height] - Cuboid height along the Y axis.
+   * @param {number} [depth] - Cuboid depth along the Z axis.
+   * @returns {{positions: number[], normals: number[], uvs: number[], indices: number[]}} Mesh data.
+   */
   static generate(width = 1, height = 1, depth = 1) {
     const hw = width / 2;
     const hh = height / 2;

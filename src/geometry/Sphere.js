@@ -1,11 +1,30 @@
 import { Geometry } from "../core/Geometry.js";
 
+/**
+ * Procedurally generates a UV sphere mesh.
+ */
 export class Sphere extends Geometry {
+  /**
+   * Creates a sphere mesh.
+   *
+   * @param {WebGLRenderingContext|WebGL2RenderingContext} gl - Rendering context.
+   * @param {number} [radius] - Sphere radius.
+   * @param {number} [widthSegments] - Number of longitudinal subdivisions.
+   * @param {number} [heightSegments] - Number of latitudinal subdivisions.
+   */
   constructor(gl, radius = 0.5, widthSegments = 32, heightSegments = 16) {
     const data = Sphere.generate(radius, widthSegments, heightSegments);
     super(gl, data);
   }
 
+  /**
+   * Builds sphere vertex, normal, UV, and index arrays.
+   *
+   * @param {number} [radius] - Sphere radius.
+   * @param {number} [widthSegments] - Number of longitudinal subdivisions.
+   * @param {number} [heightSegments] - Number of latitudinal subdivisions.
+   * @returns {{positions: number[], normals: number[], uvs: number[], indices: number[]}} Mesh data.
+   */
   static generate(radius = 0.5, widthSegments = 32, heightSegments = 16) {
     const positions = [];
     const normals = [];

@@ -4,7 +4,15 @@ import { Vec3 } from "../math/Vec3.js";
 import { TextureLoader } from "../utils/TextureLoader.js";
 import { Cuboid } from "../geometry/Cuboid.js";
 
+/**
+ * Builds the textured pitch surface and all painted field markings.
+ */
 export class Ground extends GameObject {
+  /**
+   * Creates the grass plane, boundary lines, penalty box, and penalty arc.
+   *
+   * @param {WebGLRenderingContext|WebGL2RenderingContext} gl - Rendering context.
+   */
   constructor(gl) {
     super({ name: "Ground Root" });
 
@@ -54,7 +62,7 @@ export class Ground extends GameObject {
 
     // Outer pitch lines are inset slightly so they remain visible near the ad boards.
     const pitchWidth = 19.0;
-    
+
     const outerLeft = new GameObject({ name: "Outer Left", geometry: new Cuboid(gl, t, 0.02, pitchWidth), material: lineMat });
     outerLeft.transform.position = new Vec3(-9.5, lineY, 0);
 
@@ -87,7 +95,7 @@ export class Ground extends GameObject {
 
       const dx = arcRadius * Math.cos(theta2) - arcRadius * Math.cos(theta1);
       const dz = arcRadius * Math.sin(theta2) - arcRadius * Math.sin(theta1);
-      const segLength = Math.sqrt(dx*dx + dz*dz) + 0.05;
+      const segLength = Math.sqrt(dx * dx + dz * dz) + 0.05;
 
       const segment = new GameObject({
         name: `Arc Segment ${i}`,
@@ -95,7 +103,7 @@ export class Ground extends GameObject {
         material: lineMat
       });
 
-    segment.transform.position = new Vec3(x, lineY, z);
+      segment.transform.position = new Vec3(x, lineY, z);
       segment.transform.rotation.y = Math.atan2(dx, dz);
 
       lines.push(segment);
@@ -109,12 +117,25 @@ export class Ground extends GameObject {
     this.geometry = null;
   }
 
+  /**
+   * Renders the pitch and its child marking meshes.
+   *
+   * @param {WebGLRenderingContext|WebGL2RenderingContext} gl - Rendering context.
+   * @param {ShaderProgram} shaderProgram - Active shader program wrapper.
+   * @param {Camera} camera - Active camera.
+   * @returns {?Mat4} World matrix of the root transform.
+   */
   render(gl, shaderProgram, camera) {
-    if (!this.visible) return null;
+    if (!this.visible) {
+      return null;
+    }
+
     this.transform.updateWorldMatrix();
+
     for (const child of this.childrenObjects) {
       child.render(gl, shaderProgram, camera);
     }
+
     return this.transform.worldMatrix;
   }
 }

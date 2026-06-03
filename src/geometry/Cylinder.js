@@ -1,11 +1,30 @@
 import { Geometry } from "../core/Geometry.js";
 
+/**
+ * Procedurally generates a closed cylinder mesh with side and cap geometry.
+ */
 export class Cylinder extends Geometry {
+  /**
+   * Creates a cylinder mesh.
+   *
+   * @param {WebGLRenderingContext|WebGL2RenderingContext} gl - Rendering context.
+   * @param {number} [radius] - Radius of the cylinder caps.
+   * @param {number} [height] - Total height of the cylinder.
+   * @param {number} [radialSegments] - Number of angular subdivisions.
+   */
   constructor(gl, radius = 0.1, height = 1, radialSegments = 24) {
     const data = Cylinder.generate(radius, height, radialSegments);
     super(gl, data);
   }
 
+  /**
+   * Builds cylinder vertex, normal, UV, and index arrays.
+   *
+   * @param {number} [radius] - Radius of the cylinder caps.
+   * @param {number} [height] - Total height of the cylinder.
+   * @param {number} [radialSegments] - Number of angular subdivisions.
+   * @returns {{positions: number[], normals: number[], uvs: number[], indices: number[]}} Mesh data.
+   */
   static generate(radius = 0.1, height = 1, radialSegments = 24) {
     const positions = [];
     const normals = [];

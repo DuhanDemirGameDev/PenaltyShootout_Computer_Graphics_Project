@@ -323,15 +323,15 @@ export class GameStateMachine {
       if (isClearMiss) {
         // Clear misses bypass post-bounce messaging.
         this.shotResult = ShotResult.MISS;
-        this.ui.showScreenMessage("DIŞARIYA! ❌", "msg-miss");
+        this.ui.showScreenMessage("MISS", "msg-miss");
       } else if (hitPost) {
         this.shotResult = ShotResult.MISS;
-        this.ui.showScreenMessage("DİREKTEN DÖNDÜ! 💥", "msg-miss");
+        this.ui.showScreenMessage("OFF THE POST", "msg-miss");
       } else if (this.hasSavedBall) {
         this.shotResult = ShotResult.SAVE;
         this.savesCount++;
         this.ui.updateScore(this.goalsCount, this.savesCount);
-        this.ui.showScreenMessage("KAPTI! 🧤", "msg-save");
+        this.ui.showScreenMessage("SAVED", "msg-save");
       } else {
         this.shotResult = Collision.checkShotResult(
           ballPos,
@@ -343,9 +343,9 @@ export class GameStateMachine {
         if (this.shotResult === ShotResult.GOAL) {
           this.goalsCount++;
           this.ui.updateScore(this.goalsCount, this.savesCount);
-          this.ui.showScreenMessage("GOOOL! ⚽🏆", "msg-goal");
+          this.ui.showScreenMessage("GOAL", "msg-goal");
         } else {
-          this.ui.showScreenMessage("DIŞARIYA! ❌", "msg-miss");
+          this.ui.showScreenMessage("MISS", "msg-miss");
         }
       }
     }

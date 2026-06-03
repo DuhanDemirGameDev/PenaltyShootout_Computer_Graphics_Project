@@ -1,4 +1,12 @@
+/**
+ * Normalizes keyboard and mouse input for per-frame gameplay systems.
+ */
 export class InputManager {
+  /**
+   * Registers input listeners for the supplied canvas.
+   *
+   * @param {HTMLCanvasElement} canvas - Canvas receiving pointer input.
+   */
   constructor(canvas) {
     this.canvas = canvas;
     this.keys = new Map();
@@ -27,6 +35,11 @@ export class InputManager {
     this.canvas.addEventListener("mouseup", this.handleMouseUp);
   }
 
+  /**
+   * Records an active key and marks first-frame key presses.
+   *
+   * @param {KeyboardEvent} event - Browser keyboard event.
+   */
   handleKeyDown(event) {
     if (!this.keys.get(event.code)) {
       this.keysPressedThisFrame.add(event.code);
@@ -35,14 +48,29 @@ export class InputManager {
     this.keys.set(event.code, true);
   }
 
+  /**
+   * Records a released key.
+   *
+   * @param {KeyboardEvent} event - Browser keyboard event.
+   */
   handleKeyUp(event) {
     this.keys.set(event.code, false);
   }
 
+  /**
+   * Updates pointer coordinates after mouse movement.
+   *
+   * @param {MouseEvent} event - Browser mouse event.
+   */
   handleMouseMove(event) {
     this.updateMousePosition(event);
   }
 
+  /**
+   * Begins a mouse-button interaction and stores the click for this frame.
+   *
+   * @param {MouseEvent} event - Browser mouse event.
+   */
   handleMouseDown(event) {
     this.updateMousePosition(event);
     this.mouse.isDown = true;
@@ -50,12 +78,22 @@ export class InputManager {
     this.mouseClickedThisFrame = true;
   }
 
+  /**
+   * Ends the active mouse-button interaction.
+   *
+   * @param {MouseEvent} event - Browser mouse event.
+   */
   handleMouseUp(event) {
     this.updateMousePosition(event);
     this.mouse.isDown = false;
     this.mouse.button = event.button;
   }
 
+  /**
+   * Updates canvas-local and normalized device coordinates for the mouse.
+   *
+   * @param {MouseEvent} event - Browser mouse event.
+   */
   updateMousePosition(event) {
     const rect = this.canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
@@ -67,18 +105,32 @@ export class InputManager {
     this.mouse.ndcY = rect.height > 0 ? 1 - (y / rect.height) * 2 : 0;
   }
 
+  /**
+   * @param {string} keyCode - KeyboardEvent.code value.
+   * @returns {boolean} True when the key is currently held down.
+   */
   isKeyDown(keyCode) {
     return this.keys.get(keyCode) === true;
   }
 
+  /**
+   * @param {string} keyCode - KeyboardEvent.code value.
+   * @returns {boolean} True only on the first frame of a key press.
+   */
   wasKeyPressed(keyCode) {
     return this.keysPressedThisFrame.has(keyCode);
   }
 
+  /**
+   * @returns {boolean} True only on the frame when a mouse button was pressed.
+   */
   wasMouseClicked() {
     return this.mouseClickedThisFrame;
   }
 
+  /**
+   * @returns {{x: number, y: number, ndcX: number, ndcY: number}} Current mouse position.
+   */
   getMousePosition() {
     return {
       x: this.mouse.x,
@@ -88,11 +140,17 @@ export class InputManager {
     };
   }
 
+  /**
+   * Clears transient input state after the frame has been processed.
+   */
   endFrame() {
     this.keysPressedThisFrame.clear();
     this.mouseClickedThisFrame = false;
   }
 
+  /**
+   * Removes all browser event listeners owned by the input manager.
+   */
   destroy() {
     window.removeEventListener("keydown", this.handleKeyDown);
     window.removeEventListener("keyup", this.handleKeyUp);

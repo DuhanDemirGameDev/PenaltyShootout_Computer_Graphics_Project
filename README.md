@@ -144,15 +144,15 @@ PenaltyShootout_Computer_Graphics_Project/
 |   +-- textures/
 +-- src/
     +-- core/          # WebGL app, shader program, scene, geometry, camera, time, GameObject
-    +-- geometry/      # Procedural Plane, Sphere, Cylinder, Cuboid, Cone, Torus
+    +-- geometry/      # Procedural Plane, Sphere, Cylinder, Cuboid, Torus
     +-- interaction/   # Input, camera controls, mouse picking, game state machine
     +-- lighting/      # Light, Spotlight, ShadowMap
     +-- math/          # Vec3, Mat4, Transform
     +-- objects/       # Ball, GoalPost, Goalkeeper, Ground, StadiumLights, AdBoards, Crosshair
     +-- physics/       # Ball trajectory, collision logic, goalkeeper dive
     +-- shaders/       # GLSL shader sources
-    +-- ui/            # UI manager and slider helpers
-    +-- utils/         # Texture and OBJ loading utilities
+    +-- ui/            # UI manager
+    +-- utils/         # Texture loading utilities
 ```
 
 ---

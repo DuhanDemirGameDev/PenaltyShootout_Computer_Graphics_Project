@@ -3,7 +3,15 @@ import { Cuboid } from "../geometry/Cuboid.js";
 import { Vec3 } from "../math/Vec3.js";
 import { TextureLoader } from "../utils/TextureLoader.js";
 
+/**
+ * Builds the advertising-board ring surrounding the football pitch.
+ */
 export class AdBoards extends GameObject {
+  /**
+   * Creates textured advertising boards on all four sides of the field.
+   *
+   * @param {WebGLRenderingContext|WebGL2RenderingContext} gl - Rendering context.
+   */
   constructor(gl) {
     super({ name: "AdBoards Root" });
 
@@ -69,12 +77,25 @@ export class AdBoards extends GameObject {
     this.geometry = null;
   }
 
+  /**
+   * Renders all child board meshes because the root object has no geometry.
+   *
+   * @param {WebGLRenderingContext|WebGL2RenderingContext} gl - Rendering context.
+   * @param {ShaderProgram} shaderProgram - Active shader program wrapper.
+   * @param {Camera} camera - Active camera.
+   * @returns {?Mat4} World matrix of the root transform.
+   */
   render(gl, shaderProgram, camera) {
-    if (!this.visible) return null;
+    if (!this.visible) {
+      return null;
+    }
+
     this.transform.updateWorldMatrix();
+
     for (const child of this.childrenObjects) {
       child.render(gl, shaderProgram, camera);
     }
+
     return this.transform.worldMatrix;
   }
 }
