@@ -31,58 +31,92 @@ export class BallTrajectory {
       + (asymmetricArc * arcHeight)
       + (verticalSpin * tClamp * (1.0 - tClamp));
 
-    // Direk ve Üst Direğe Çarpma Fiziği (Post Bounce Simulation)
-    // Direk konumları: Sol direk X = -3.66, Sağ direk X = 3.66, Üst direk Y = 3.0.
-    // Topun hedef noktası bu direklere çarpmaya yakınsa sekme tetiklenir:
-    const hitLeft = Math.abs(target.x - (-3.66)) < 0.35 && target.y < 3.1;
-    const hitRight = Math.abs(target.x - 3.66) < 0.35 && target.y < 3.1;
-    const hitCrossbar = Math.abs(target.y - 3.0) < 0.35 && Math.abs(target.x) < 3.76;
+    // ── Post / Crossbar Bounce Detection ─────────────────────────────────────
+    // CRITICAL: Detection must use the ball's ACTUAL computed position at the
+    // moment of potential impact (t = collisionT), NOT the crosshair target.
+    // Using target.x/target.y was wrong because sideSpin shifts the real ball
+    // position away from the target, causing false post-hits for wide shots.
+    //
+    // STEP 1 – Absolute MISS guard (checked first, highest priority)
+    //   If the ball's real position at impact is clearly outside the goal frame,
+    //   it is a guaranteed MISS. Skip all bounce logic entirely.
+    //
+    // STEP 2 – Strict POST HIT margins (only if survived Step 1)
+    //   Left post band  : x in [-4.0, -3.4]  and y <= 3.3
+    //   Right post band : x in [ 3.4,  4.0]  and y <= 3.3
+    //   Crossbar band   : y in [ 2.8,  3.3]  and x in (-3.4, 3.4)
+    //
+    // STEP 3 – GOAL / free flight (handled downstream in Collision.js)
+
+    const collisionT = 0.90;
+
+    // Compute the ball's REAL position at the impact moment (includes sideSpin)
+    const xAtImpact = (start.x + (target.x - start.x) * collisionT)
+                    + (sideSpin * collisionT * collisionT);
+    const asymmetricArcImpact = Math.sin(Math.pow(collisionT, 1.4) * Math.PI);
+    const yAtImpact = (start.y + (target.y - start.y) * collisionT)
+                    + (asymmetricArcImpact * arcHeight)
+                    + (verticalSpin * collisionT * (1.0 - collisionT));
+
+    // STEP 1 — Absolute MISS: ball is clearly outside the goal frame at impact
+    const isClearMiss = xAtImpact < -4.0 || xAtImpact > 4.0 || yAtImpact > 3.3;
+
+    // STEP 2 — Strict post/crossbar margins (mutually exclusive, priority order)
+    const hitLeft = !isClearMiss
+                 && xAtImpact >= -4.0 && xAtImpact <= -3.4
+                 && yAtImpact <= 3.3;
+
+    const hitRight = !isClearMiss && !hitLeft
+                  && xAtImpact >= 3.4 && xAtImpact <= 4.0
+                  && yAtImpact <= 3.3;
+
+    const hitCrossbar = !isClearMiss && !hitLeft && !hitRight
+                     && yAtImpact >= 2.8 && yAtImpact <= 3.3
+                     && xAtImpact > -3.4 && xAtImpact < 3.4;
 
     if (hitLeft || hitRight || hitCrossbar) {
-      const collisionT = 0.90; // Şutun direğe çarpma zaman dilimi
       if (t > collisionT) {
-        const tb = (t - collisionT) / (3.5 - collisionT); // Sekme süresini 3.5'e yayıyoruz
-        
-        // Çarpışma anındaki tam konumlar (t = 0.90 değerleriyle)
-        const xCol = (start.x + (target.x - start.x) * collisionT) + (sideSpin * collisionT * collisionT);
-        const zCol = start.z + (target.z - start.z) * collisionT;
-        const asymmetricArcCol = Math.sin(Math.pow(collisionT, 1.4) * Math.PI);
-        const yCol = (start.y + (target.y - start.y) * collisionT)
-          + (asymmetricArcCol * arcHeight)
-          + (verticalSpin * collisionT * (1.0 - collisionT));
+        const tb = (t - collisionT) / (3.5 - collisionT); // sekme süresini 3.5'e yay
 
-        // 1. Z ekseninde sahaya doğru geri fırlama yansıması
+        // Çarpışma anındaki Z konumu
+        const zCol = start.z + (target.z - start.z) * collisionT;
+
+        // Z ekseninde sahaya doğru geri fırlama
         currentZ = zCol + 8.5 * tb;
 
-        // 2. Çarpılan direğe göre yansıma açısı (X ve Y sekmeleri)
+        // Her direğe özgü yansıma açısı
         if (hitLeft) {
-          currentX = xCol + 4.5 * tb; // Sol direkten sağa doğru geri seker
-          currentY = Math.max(0.3, yCol - 3.0 * tb * tb); // Yerçekimiyle yere düşer
+          currentX = xAtImpact + 4.5 * tb;  // Sol direkten sağa seker
+          currentY = Math.max(0.3, yAtImpact - 3.0 * tb * tb);
         } else if (hitRight) {
-          currentX = xCol - 4.5 * tb; // Sağ direkten sola doğru geri seker
-          currentY = Math.max(0.3, yCol - 3.0 * tb * tb);
-        } else if (hitCrossbar) {
-          // Üst direğe çarpıp hızla yere doğru fırlar
-          currentY = Math.max(0.3, yCol - 6.0 * tb * tb);
-          currentX = xCol + (target.x - start.x) * 0.5 * tb;
+          currentX = xAtImpact - 4.5 * tb;  // Sağ direkten sola seker
+          currentY = Math.max(0.3, yAtImpact - 3.0 * tb * tb);
+        } else { // hitCrossbar
+          currentY = Math.max(0.3, yAtImpact - 6.0 * tb * tb);
+          currentX = xAtImpact + (target.x - start.x) * 0.5 * tb;
         }
       }
-    } else if (t > 1.0) {
-      // Direğe çarpmadıysa ve gol olduysa: kale ağlarının içine süzülür ve yerde yuvarlanır
+    } else if (!isClearMiss && t > 1.0) {
+      // STEP 3 — Ball crossed the goal line without hitting a post.
+      // If it's inside the goal mouth, animate it settling into the net.
       const timeAfter = t - 1.0;
-      
-      const isGoalTarget = target.x > -3.55 && target.x < 3.55 && target.y < 2.9;
+      const isGoalTarget = xAtImpact > -3.4 && xAtImpact < 3.4 && yAtImpact < 2.8;
       if (isGoalTarget) {
-        // Ağların içine süzülüş: Z ekseninde geriye süzülür, Y ekseninde yere süzülüp yuvarlanır
         currentZ = target.z + (target.z - start.z) * 0.18 * timeAfter;
         currentY = Math.max(0.3, target.y - 3.2 * timeAfter * timeAfter);
         currentX = target.x + (sideSpin * 1.05);
       } else {
-        // Avuta gidiş: kale dışına uçmaya ve yere düşmeye devam eder
+        // Wide / high shot — ball continues flying out of bounds
         currentZ = start.z + (target.z - start.z) * t;
         currentX = (start.x + (target.x - start.x) * t) + (sideSpin * t * t);
         currentY = Math.max(0.3, currentY - 5.0 * timeAfter * timeAfter);
       }
+    } else if (isClearMiss && t > 1.0) {
+      // Guaranteed MISS: ball continues on its natural trajectory, no bouncing
+      const timeAfter = t - 1.0;
+      currentZ = start.z + (target.z - start.z) * t;
+      currentX = (start.x + (target.x - start.x) * t) + (sideSpin * t * t);
+      currentY = Math.max(0.3, currentY - 5.0 * timeAfter * timeAfter);
     }
 
     // Topun zemine gömülmesini önle

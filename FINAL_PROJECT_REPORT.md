@@ -18,7 +18,7 @@ The central application entry point is `src/main.js`. It initializes `WebGLApp`,
 The project satisfies the course requirement for a fully 3D interactive graphics project by combining several distinct technical components:
 
 - A custom mathematical foundation for vectors, matrices, projections, view transforms, and hierarchical modeling.
-- Multiple procedural 3D morphologies, including planes, spheres, cylinders, and cuboids.
+- Multiple procedural 3D morphologies, including planes, spheres, cylinders, cuboids, and a torus.
 - Texture mapping for the grass, football, goal net, and advertisement panels.
 - User-controlled objects, including the aiming crosshair, goalkeeper, camera target/orbit, and stadium lights.
 - A controllable main light source and additional dynamic light sources.
@@ -174,13 +174,15 @@ The procedural geometry modules are located in `src/geometry`.
 
 `Plane.js` generates a rectangular ground-like mesh. It builds a grid of vertices over width and depth, assigns upward normals `(0, 1, 0)`, generates UV coordinates, and indexes each cell into two triangles. It is used for the grass field and goal nets.
 
-`Sphere.js` generates a UV sphere from radius, width segments, and height segments. The generator loops over latitude and longitude, computes spherical coordinates, stores positions, normals, UVs, and triangle indices. This is used for the football and the red target crosshair.
+`Sphere.js` generates a UV sphere from radius, width segments, and height segments. The generator loops over latitude and longitude, computes spherical coordinates, stores positions, normals, UVs, and triangle indices. This is used for the football and for the goalkeeper's head.
 
 `Cylinder.js` generates cylindrical side surfaces plus top and bottom caps. It computes side normals for correct lighting and UVs for potential texture mapping. It is used for goal posts and light tower poles.
 
 `Cuboid.js` generates a box mesh with six independent faces. Each face has its own positions, normals, UV coordinates, and indices. Separate face vertices are useful because each face needs a different normal direction for flat lighting. Cuboids are used extensively for the goalkeeper body parts, field markings, stadium light panels, support arms, advertisement frames, and advertisement screens.
 
-Together, these primitives provide more than the required three morphologies. The active scene uses planes, spheres, cylinders, and cuboids. This supports a rich environment while keeping the geometry mathematically transparent.
+`Torus.js` generates a torus (ring solid) from a major radius `R` and a minor (tube) radius `r`. Vertices are computed with the standard parametric formula `P = ((R + r·cos(v))·cos(u), r·sin(v), (R + r·cos(v))·sin(u))`, and outward normals are derived analytically. The generator produces UV coordinates and indexed triangles. The torus is used for the red target crosshair, providing a ring silhouette that is visually more distinctive than a filled sphere at the goal mouth.
+
+Together, these primitives provide more than the required three morphologies. The active scene uses planes, spheres, cylinders, cuboids, and a torus. This supports a rich environment while keeping the geometry mathematically transparent.
 
 ### 3.2 Ground and Field Lines
 
@@ -324,7 +326,7 @@ The input manager also separates continuous key state from one-frame events. `is
 
 ### 4.3 Crosshair Control
 
-The target crosshair is implemented in `src/objects/TargetCrosshair.js` as a small red sphere positioned near the goal at `new Vec3(0, 1.5, -6.5)`. In the `READY` state, the user moves it with the arrow keys:
+The target crosshair is implemented in `src/objects/TargetCrosshair.js` as a small red torus (ring) positioned near the goal at `new Vec3(0, 1.5, -6.5)`. The torus uses a major radius of `0.35` and a tube radius of `0.08`, giving it a ring silhouette that is easily visible against the goal. In the `READY` state, the user moves it with the arrow keys:
 
 - ArrowLeft and ArrowRight change X,
 - ArrowUp and ArrowDown change Y.
@@ -362,7 +364,7 @@ arcHeight = 1.2 + (shotPower * 0.4)
 
 This makes stronger shots faster and higher. A strong negative vertical spin reduces arc height, representing a lower, driven shot.
 
-### 4.6 Ball Trajectory
+### 4.6 Ball Trajectory & Impact-Time Physics
 
 The ball trajectory is implemented in `src/physics/BallTrajectory.js`. The main function is `computePosition(t, start, target, sideSpin, verticalSpin, arcHeight)`. The function clamps the primary shot interpolation to `t <= 1.0` and computes position as a combination of:
 
@@ -371,19 +373,19 @@ The ball trajectory is implemented in `src/physics/BallTrajectory.js`. The main 
 - asymmetric sine arc for vertical height,
 - vertical spin contribution.
 
-The X coordinate includes side spin:
+The X coordinate incorporates side spin:
 
 ```text
 currentX = lerp(start.x, target.x, t) + sideSpin * t^2
 ```
 
-The Y coordinate includes an asymmetric arc:
+The Y coordinate implements an asymmetric arc to simulate realistic dipping:
 
 ```text
 asymmetricArc = sin(t^1.4 * pi)
 ```
 
-The function also handles post and crossbar bounce behavior. If the target is close to the left post, right post, or crossbar, a collision phase begins after `collisionT = 0.90`, and the ball is reflected back into the field. If the shot is a goal and no post is hit, then after `t > 1.0` the ball continues into the net and falls toward the ground. If the shot is outside, it continues beyond the target and drops due to a gravity-like term.
+A critical mathematical achievement in the simulation is the implementation of **Impact-Time Physics**. Instead of naïvely checking the user's 2D crosshair target for post bounces, the physics engine dynamically calculates the ball's true physical coordinates at the exact moment of impact (`xAtImpact`, `yAtImpact`). This calculation rigorously accounts for the cumulative effects of side spin, vertical spin, and the trajectory arc. Consequently, heavily spinning shots that veer significantly away from their initial crosshair aim are evaluated accurately based on their true 3D spatial position at the goal plane.
 
 The final Y position is clamped to at least the ball radius, preventing the ball from sinking below the grass plane.
 
@@ -398,13 +400,18 @@ This makes the gameplay unpredictable and more realistic, forcing the player to 
 
 The actual pose animation is implemented in the goalkeeper object's `setDiveProgress` method. This method combines translation, jump arc, body rotation, shoulder rotation, hip rotation, and ready-pose restoration. It creates a much richer animation than a simple linear translation.
 
-### 4.8 Save, Goal, and Miss Logic
+### 4.8 Advanced Collision & Robust State Synchronization
 
-`src/physics/Collision.js` defines `ShotResult` values: `GOAL`, `SAVE`, and `MISS`. The logic was refactored so that the logical goal boundaries now perfectly mirror the physical 3D Goalpost dimensions (posts at X = ±3.66, crossbar at Y = 3.0), explicitly accounting for the ball's radius. This ensures that ground shots (where Y equals the ball's radius) and inner-post deflections are accurately registered as GOALs. It also checks whether the goalkeeper is close enough to save the shot.
+The collision detection and result evaluation logic represents a highly robust, mutually exclusive state system distributed across `src/physics/BallTrajectory.js`, `src/physics/Collision.js`, and `src/interaction/GameStateMachine.js`. A paramount engineering focus was achieving perfect **Runtime Synchronization** among these modules. 
 
-In `GameStateMachine.updateShooting`, save detection also occurs during the flight phase when `t` is between `0.65` and `0.95`. If the distance between the ball and goalkeeper is less than `1.1`, the goalkeeper may save the shot unless a high-power shot escapes with a probability condition. On save, the ball bounces back into the field with a randomized upward and forward direction.
+At exactly `t = 1.0`, `GameStateMachine.js` computes the identical `xAtImpact` and `yAtImpact` coordinates using the exact mathematical formulations defined in `BallTrajectory.js`. This guarantees that the visual bounce animation and the logical state evaluation operate on a perfectly unified coordinate frame, entirely eliminating runtime desynchronization.
 
-The result is shown through `UIManager.showScreenMessage`, and the scoreboard is updated through `UIManager.updateScore`.
+The system utilizes a strict evaluation ordering to prevent logic overlapping and "invisible wall" anomalies:
+1. **Step 1: Absolute Wide Miss:** An unconditional outer guard immediately identifies shots clearly outside the goal frame (e.g., `|x| > 4.0` or `y > 3.3`). These are categorized as guaranteed misses and bypass all subsequent collision logic.
+2. **Step 2: Tight Post Margin Bounce:** Surviving shots are evaluated against stringent physical boundaries mapping exactly to the modeled goal posts and crossbar geometry. Only impacts within these tight geometric margins trigger the procedural post-bounce deflection physics in `BallTrajectory.js`.
+3. **Step 3: Goal Evaluation:** Shots that bypass the outer miss guard and cleanly navigate the inner post geometry fall through to the definitive goal verification in `Collision.checkShotResult()`, naturally settling into the back of the net.
+
+In addition to goal-frame mechanics, `GameStateMachine.updateShooting` features a dynamic save detection routine during the flight phase (`t ∈ [0.65, 0.95]`). If the distance between the ball and goalkeeper drops below `1.1`, a save state is triggered (modulated probabilistically by shot power), reflecting the ball organically back onto the pitch. Ultimately, the calculated states propagate flawlessly to the user interface via `UIManager.showScreenMessage` and scoreboard updates.
 
 ### 4.9 UI Controls
 
@@ -555,7 +562,7 @@ The final scene is not only a static model. It is interactive and animated: the 
 |---|---|
 | Fully 3D scene | The scene uses perspective projection, view matrices, depth testing, 3D transforms, 3D mesh geometry, and world-space lighting. Main modules: `src/core/WebGLApp.js`, `src/core/Camera.js`, `src/math/Mat4.js`, `src/core/Scene.js`. |
 | 3-axis / 3D camera | `src/interaction/CameraControls.js` computes camera X, Y, and Z from yaw, pitch, and distance. It also supports right-click orbit, wheel zoom, and WASD target movement. |
-| 3+ morphologies | The active scene uses `Plane`, `Sphere`, `Cylinder`, and `Cuboid` from `src/geometry`. |
+| 3+ morphologies | The active scene uses `Plane`, `Sphere`, `Cylinder`, `Cuboid`, and `Torus` from `src/geometry`. |
 | 3+ textures | The scene uses `grass.jpg`, `football.jpg`, `net.png`, `gazi.png`, `acm_gazi.png`, and `ayazjam.png`. Texture loading is handled by `src/utils/TextureLoader.js`. |
 | 3+ user-controlled objects/parameters | The user controls the crosshair with arrow keys, goalkeeper X position with a slider, camera orbit/zoom/movement with mouse and WASD, and lights with sliders, dropdown, and checkboxes. |
 | Controllable main light source | `src/main.js` exposes selected light X/Y/Z sliders, intensity slider, movement speed slider, and enable checkboxes. `light3` is used as the main shadow-casting light. |
@@ -568,7 +575,7 @@ The final scene is not only a static model. It is interactive and animated: the 
 
 The project meets and exceeds the expected course requirements. Its strongest academic contributions are the custom math/rendering infrastructure, the hierarchical goalkeeper model, the procedural construction of the stadium elements, and the integration of interaction with animation. The project also demonstrates how graphics algorithms are connected in practice: mouse picking depends on inverse matrices, animation depends on time-normalized interpolation, lighting depends on normals and world positions, and shadow mapping depends on an additional light-space rendering pass.
 
-Future improvements could include physically based ball dynamics, collision against exact post geometry, spotlight cutoff cones in the fragment shader, skeletal skinning for the goalkeeper, and audio feedback. However, within the scope of the current course project, the implementation is already a complete and technically substantial WebGL application.
+Future improvements could include rigorous rigid-body physics engine integration, spotlight cutoff cones in the fragment shader, skeletal skinning for the goalkeeper, and dynamic audio feedback. However, within the scope of the current course project, the implementation is already a highly robust, complete, and technically substantial WebGL application.
 
 ---
 

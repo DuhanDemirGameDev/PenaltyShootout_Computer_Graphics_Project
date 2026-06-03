@@ -285,18 +285,48 @@ export class GameStateMachine {
       }
     }
 
-    // Gol / kurtarış veya direkten sekme sonucunu tam çizgi geçiş anında (t = 1.0) değerlendir (FIFA gibi akıcı)
+    // ── Result Evaluation (runs once when t crosses 1.0) ─────────────────────
+    // IMPORTANT: This block must use the SAME impact-point calculation as
+    // BallTrajectory.js.  The ball's real position at impact includes sideSpin,
+    // which shifts the ball away from target.x/target.y.  Checking target.*
+    // directly with a wide tolerance (the old ±0.35 approach) is what caused
+    // wide shots to falsely register as post hits.
     if (!this.resultEvaluated && t >= 1.0) {
       this.resultEvaluated = true;
-      
-      // Direk temas kontrolü
-      const target = this.ballTargetPosition;
-      const hitLeft = Math.abs(target.x - (-3.66)) < 0.35 && target.y < 3.1;
-      const hitRight = Math.abs(target.x - 3.66) < 0.35 && target.y < 3.1;
-      const hitCrossbar = Math.abs(target.y - 3.0) < 0.35 && Math.abs(target.x) < 3.76;
+
+      // Replicate BallTrajectory's xAtImpact / yAtImpact calculation exactly
+      // so the three files share the same coordinate frame.
+      const collisionT   = 0.90;
+      const st           = this.ballStartPosition;
+      const tg           = this.ballTargetPosition;
+      const xAtImpact    = (st.x + (tg.x - st.x) * collisionT)
+                         + (this.sideSpin * collisionT * collisionT);
+      const arcImpact    = Math.sin(Math.pow(collisionT, 1.4) * Math.PI);
+      const yAtImpact    = (st.y + (tg.y - st.y) * collisionT)
+                         + (arcImpact * this.arcHeight)
+                         + (this.verticalSpin * collisionT * (1.0 - collisionT));
+
+      // STEP 1 — Absolute MISS: ball was clearly outside the goal frame at impact.
+      // Mirrors BallTrajectory.js isClearMiss and Collision.js STEP 1.
+      const isClearMiss = xAtImpact < -4.0 || xAtImpact > 4.0 || yAtImpact > 3.3;
+
+      // STEP 2 — Strict post/crossbar hit (same bands as BallTrajectory.js STEP 2)
+      const hitLeft     = !isClearMiss
+                       && xAtImpact >= -4.0 && xAtImpact <= -3.4
+                       && yAtImpact <= 3.3;
+      const hitRight    = !isClearMiss && !hitLeft
+                       && xAtImpact >= 3.4 && xAtImpact <= 4.0
+                       && yAtImpact <= 3.3;
+      const hitCrossbar = !isClearMiss && !hitLeft && !hitRight
+                       && yAtImpact >= 2.8 && yAtImpact <= 3.3
+                       && xAtImpact > -3.4 && xAtImpact < 3.4;
       const hitPost = hitLeft || hitRight || hitCrossbar;
 
-      if (hitPost) {
+      if (isClearMiss) {
+        // Ball was clearly wide/high — straightforward miss, no post bounce message
+        this.shotResult = ShotResult.MISS;
+        this.ui.showScreenMessage("DIŞARIYA! ❌", "msg-miss");
+      } else if (hitPost) {
         this.shotResult = ShotResult.MISS;
         this.ui.showScreenMessage("DİREKTEN DÖNDÜ! 💥", "msg-miss");
       } else if (this.hasSavedBall) {
